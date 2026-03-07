@@ -23,43 +23,48 @@ app.use((req, res, next) => { console.log(new Date().toISOString(), req.method, 
 // FUNZIONI UTILITY E HELPER
 // ============================================
 
-/**
- * Legge il database dal file JSON
- * @returns {object} Contenuto del database
- */
+/** legge il file db.json e lo trasforma in un oggetto JavaScript usabile. È come "aprire" il tuo archivio dati.*/
 function readDB()      { return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8')); }
 
-/**
- * Salva il database nel file JSON
- * @param {object} d - Dati da salvare
- */
+/** prende i dati e li salva nel file db.json. È come "salvare" il file.*/
 function writeDB(d)    { fs.writeFileSync(DB_PATH, JSON.stringify(d, null, 2)); }
 
-/**
- * Genera un ID univoco casuale (hex)
- * @returns {string} ID generato
- */
+/**genera un codice casuale (es. a3f9c12b...) da usare come ID univoco per ogni utente, playlist o canzone.*/
 function genId()       { return crypto.randomBytes(8).toString('hex'); }
 
-/**
- * Rimuove la password dall'oggetto utente per la risposta
- * @param {object} u - Oggetto utente
- * @returns {object} Utente senza password
- */
+/** prima di mandare i dati di un utente al browser, rimuove la password.*/
 function safeUser(u)   { const { password, ...s } = u; return s; }
 
 // ============================================
 // MIDDLEWARE DI AUTENTICAZIONE
 // ============================================
 
-/**
- * Middleware che verifica se l'utente è autenticato
- * Legge l'ID utente dall'header X-User-Id
- */
 function requireAuth(req, res, next) {
-  const user = readDB().users.find(u => u.id === req.headers['x-user-id']);
-  if (!user) return res.status(401).json({ error: 'Non autenticato' });
+
+  // Legge l'ID utente che il browser ha mandato nell'header della richiesta
+  const userId = req.headers['x-user-id'];
+
+  // Se non c'è nessun ID, l'utente non è loggato → blocca subito
+  if (!userId) {
+    return res.status(401).json({ error: 'Non autenticato' });
+  }
+
+  // Apre il database e cerca un utente con quell'ID
+  const db   = readDB();
+  const user = db.users.find(function(u) {
+    return u.id === userId;
+  });
+
+  // Se non esiste nessun utente con quell'ID → blocca
+  if (!user) {
+    return res.status(401).json({ error: 'Utente non trovato' });
+  }
+
+  // Utente trovato! Lo salva nella richiesta così le route
+  // successive possono sapere chi sta facendo la richiesta
   req.currentUser = user;
+
+  // Tutto ok, vai avanti con la route originale
   next();
 }
 
@@ -67,141 +72,361 @@ function requireAuth(req, res, next) {
 // ROTTE AUTENTICAZIONE
 // ============================================
 
-/**
- * POST /api/auth/register
- * Crea un nuovo account utente
- */
-app.post('/api/auth/register', (req, res) => {
-  const { username, password, avatar, bio } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+app.post('/api/auth/register', function(req, res) {
+
+  // Estrae i dati mandati dal browser nel corpo della richiesta
+  const username = req.body.username;
+  const password = req.body.password;
+  const avatar   = req.body.avatar;
+  const bio      = req.body.bio;
+
+  // Se username o password sono vuoti → blocca con errore 400 ("richiesta sbagliata")
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+  }
+
+  // Apre il database
   const db = readDB();
-  if (db.users.find(u => u.username.toLowerCase() === username.toLowerCase()))
+
+  // Controlla se esiste già un utente con lo stesso username
+  // toLowerCase() serve per trattare "Mario" e "mario" come uguali
+  const utenteEsistente = db.users.find(function(u) {
+    return u.username.toLowerCase() === username.toLowerCase();
+  });
+
+  // Se l'username è già preso → blocca con errore 409 ("conflitto")
+  if (utenteEsistente) {
     return res.status(409).json({ error: 'Username già in uso' });
-  const user = { id: genId(), username: username.trim(), password, avatar: avatar || '🎧', bio: bio || '', createdAt: new Date().toISOString() };
-  db.users.push(user);
+  }
+
+  // Crea il nuovo oggetto utente
+  const nuovoUtente = {
+    id:        genId(),                  // ID casuale univoco
+    username:  username.trim(),          // .trim() rimuove gli spazi inutili
+    password:  password,                 // la password così com'è
+    avatar:    avatar || '🎧',           // se non ha scelto un avatar, usa 🎧
+    bio:       bio    || '',             // se non ha scritto una bio, stringa vuota
+    createdAt: new Date().toISOString()  // data e ora di registrazione
+  };
+
+  // Aggiunge il nuovo utente all'array nel database
+  db.users.push(nuovoUtente);
+
+  // Salva il database aggiornato nel file db.json
   writeDB(db);
-  res.status(201).json({ message: 'Registrazione avvenuta', user: safeUser(user) });
+
+  // Risponde al browser con successo (201 = "creato")
+  // safeUser() rimuove la password prima di mandarla al client
+  res.status(201).json({
+    message: 'Registrazione avvenuta',
+    user:    safeUser(nuovoUtente)
+  });
+
 });
 
-/**
- * POST /api/auth/login
- * Autentica un utente con username e password
- */
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Credenziali mancanti' });
-  const user = readDB().users.find(u => u.username === username && u.password === password);
-  if (!user) return res.status(401).json({ error: 'Username o password errati' });
-  res.json({ message: 'Login ok', user: safeUser(user) });
+app.post('/api/auth/login', function(req, res) {
+
+  // Estrae username e password mandati dal browser
+  const username = req.body.username;
+  const password = req.body.password;
+
+  // Se uno dei due campi è vuoto → blocca con errore 400 ("richiesta sbagliata")
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Credenziali mancanti' });
+  }
+
+  // Apre il database e cerca un utente che abbia
+  // sia lo stesso username che la stessa password
+  const db   = readDB();
+  const user = db.users.find(function(u) {
+    return u.username === username && u.password === password;
+  });
+
+  // Se non trova nessun utente corrispondente → blocca con errore 401 ("non autorizzato")
+  // Non diciamo quale dei due è sbagliato per motivi di sicurezza
+  if (!user) {
+    return res.status(401).json({ error: 'Username o password errati' });
+  }
+
+  // Utente trovato! Risponde con successo (200 di default)
+  // safeUser() rimuove la password prima di mandarla al browser
+  res.json({
+    message: 'Login ok',
+    user:    safeUser(user)
+  });
+
 });
 
 // ============================================
 // ROTTE PLAYLIST - GET
 // ============================================
 
-/**
- * GET /api/playlists
- * Restituisce tutte le playlist con i dati dell'autore
- */
-app.get('/api/playlists', (req, res) => {
+// ============================================
+// ROTTE PLAYLIST - READ
+// ============================================
+
+// Restituisce tutte le playlist con le info dell'autore
+app.get('/api/playlists', function(req, res) {
+
+  // Apre il database
   const db = readDB();
-  res.json(db.playlists.map(pl => ({ ...pl, author: safeUser(db.users.find(u => u.id === pl.userId) || {}) })));
+
+  // Per ogni playlist, cerca l'utente che l'ha creata e lo aggiunge come "author"
+  const playlistConAutore = db.playlists.map(function(pl) {
+
+    // Cerca l'utente nel database usando l'id salvato nella playlist
+    // Se non lo trova (utente cancellato), usa un oggetto vuoto {}
+    const autore = db.users.find(function(u) {
+      return u.id === pl.userId;
+    }) || {};
+
+    // Restituisce la playlist con il campo "author" aggiunto
+    // safeUser() rimuove la password dall'oggetto autore
+    return { ...pl, author: safeUser(autore) };
+  });
+
+  // Manda al browser la lista completa
+  res.json(playlistConAutore);
+
 });
 
-/**
- * GET /api/playlists/:id
- * Restituisce una playlist specifica con i dati dell'autore
- */
-app.get('/api/playlists/:id', (req, res) => {
+
+// Restituisce una singola playlist cercata per ID
+app.get('/api/playlists/:id', function(req, res) {
+
+  // Apre il database
   const db = readDB();
-  const pl = db.playlists.find(p => p.id === req.params.id);
-  if (!pl) return res.status(404).json({ error: 'Playlist non trovata' });
-  res.json({ ...pl, author: safeUser(db.users.find(u => u.id === pl.userId) || {}) });
+
+  // Cerca la playlist con l'ID passato nell'URL (es. /api/playlists/abc123)
+  const playlist = db.playlists.find(function(p) {
+    return p.id === req.params.id;
+  });
+
+  // Se non esiste → errore 404 ("non trovata")
+  if (!playlist) {
+    return res.status(404).json({ error: 'Playlist non trovata' });
+  }
+
+  // Cerca l'autore della playlist nel database
+  const autore = db.users.find(function(u) {
+    return u.id === playlist.userId;
+  }) || {};
+
+  // Risponde con la playlist + i dati dell'autore (senza password)
+  res.json({ ...playlist, author: safeUser(autore) });
+
 });
+
 
 // ============================================
 // ROTTE PLAYLIST - CREATE, UPDATE, DELETE
 // ============================================
 
-/**
- * POST /api/playlists
- * Crea una nuova playlist (utente autenticato)
- */
-app.post('/api/playlists', requireAuth, (req, res) => {
-  const { name, subtitle, cover } = req.body;
-  if (!name) return res.status(400).json({ error: 'Il nome è obbligatorio' });
+// Crea una nuova playlist (richiede login)
+app.post('/api/playlists', requireAuth, function(req, res) {
+
+  // Estrae i dati mandati dal browser
+  const name     = req.body.name;
+  const subtitle = req.body.subtitle;
+  const cover    = req.body.cover;
+
+  // Il nome è obbligatorio → blocca con errore 400 se manca
+  if (!name) {
+    return res.status(400).json({ error: 'Il nome è obbligatorio' });
+  }
+
+  // Apre il database
   const db = readDB();
-  const pl = { id: genId(), userId: req.currentUser.id, name: name.trim(), subtitle: subtitle?.trim() || '', cover: cover || '🎵', songs: [], createdAt: new Date().toISOString() };
-  db.playlists.push(pl);
+
+  // Crea il nuovo oggetto playlist
+  const nuovaPlaylist = {
+    id:        genId(),                       // ID casuale univoco
+    userId:    req.currentUser.id,            // ID dell'utente loggato (messo da requireAuth)
+    name:      name.trim(),                   // .trim() rimuove spazi inutili
+    subtitle:  subtitle ? subtitle.trim() : '',  // se non c'è sottotitolo, stringa vuota
+    cover:     cover || '🎵',                 // se non ha scelto una cover, usa 🎵
+    songs:     [],                            // inizia con nessuna canzone
+    createdAt: new Date().toISOString()       // data e ora di creazione
+  };
+
+  // Aggiunge la playlist al database e salva
+  db.playlists.push(nuovaPlaylist);
   writeDB(db);
-  res.status(201).json(pl);
+
+  // Risponde con successo (201 = "creato") e manda la playlist appena creata
+  res.status(201).json(nuovaPlaylist);
+
 });
 
-/**
- * PUT /api/playlists/:id
- * Modifica una playlist (solo il proprietario)
- */
-app.put('/api/playlists/:id', requireAuth, (req, res) => {
+
+// Modifica una playlist esistente (richiede login)
+app.put('/api/playlists/:id', requireAuth, function(req, res) {
+
+  // Apre il database
   const db = readDB();
-  const i  = db.playlists.findIndex(p => p.id === req.params.id);
-  if (i === -1) return res.status(404).json({ error: 'Playlist non trovata' });
-  if (db.playlists[i].userId !== req.currentUser.id) return res.status(403).json({ error: 'Non autorizzato' });
-  db.playlists[i] = { ...db.playlists[i], ...req.body };
+
+  // Cerca la posizione (indice) della playlist nell'array
+  // findIndex restituisce -1 se non la trova
+  const indice = db.playlists.findIndex(function(p) {
+    return p.id === req.params.id;
+  });
+
+  // Se non esiste → errore 404 ("non trovata")
+  if (indice === -1) {
+    return res.status(404).json({ error: 'Playlist non trovata' });
+  }
+
+  // Controlla che la playlist appartenga all'utente loggato
+  // Non puoi modificare le playlist degli altri!
+  if (db.playlists[indice].userId !== req.currentUser.id) {
+    return res.status(403).json({ error: 'Non autorizzato' });
+  }
+
+  // Aggiorna la playlist mantenendo i vecchi dati e sovrascrivendo solo quelli nuovi
+  // ...db.playlists[indice] = copia tutti i vecchi campi
+  // ...req.body = sovrascrive solo i campi mandati dal browser
+  db.playlists[indice] = { ...db.playlists[indice], ...req.body };
+
+  // Salva il database aggiornato
   writeDB(db);
-  res.json(db.playlists[i]);
+
+  // Risponde con la playlist aggiornata
+  res.json(db.playlists[indice]);
+
 });
 
-/**
- * DELETE /api/playlists/:id
- * Elimina una playlist (solo il proprietario)
- */
-app.delete('/api/playlists/:id', requireAuth, (req, res) => {
+
+// Elimina una playlist (richiede login)
+app.delete('/api/playlists/:id', requireAuth, function(req, res) {
+
+  // Apre il database
   const db = readDB();
-  const i  = db.playlists.findIndex(p => p.id === req.params.id);
-  if (i === -1) return res.status(404).json({ error: 'Playlist non trovata' });
-  if (db.playlists[i].userId !== req.currentUser.id) return res.status(403).json({ error: 'Non autorizzato' });
-  db.playlists.splice(i, 1);
+
+  // Cerca la posizione della playlist nell'array
+  const indice = db.playlists.findIndex(function(p) {
+    return p.id === req.params.id;
+  });
+
+  // Se non esiste → errore 404 ("non trovata")
+  if (indice === -1) {
+    return res.status(404).json({ error: 'Playlist non trovata' });
+  }
+
+  // Controlla che la playlist appartenga all'utente loggato
+  if (db.playlists[indice].userId !== req.currentUser.id) {
+    return res.status(403).json({ error: 'Non autorizzato' });
+  }
+
+  // splice(indice, 1) rimuove 1 elemento all'indice trovato
+  db.playlists.splice(indice, 1);
+
+  // Salva il database aggiornato
   writeDB(db);
+
+  // Risponde con messaggio di conferma
   res.json({ message: 'Playlist eliminata' });
+
 });
+
 
 // ============================================
 // ROTTE CANZONI (SONGS)
 // ============================================
 
-/**
- * POST /api/playlists/:id/songs
- * Aggiunge una canzone a una playlist (solo il proprietario)
- */
-app.post('/api/playlists/:id/songs', requireAuth, (req, res) => {
-  const { title, artist, duration } = req.body;
-  if (!title || !artist) return res.status(400).json({ error: 'Titolo e artista sono obbligatori' });
+// Aggiunge una canzone a una playlist (richiede login)
+app.post('/api/playlists/:id/songs', requireAuth, function(req, res) {
+
+  // Estrae i dati della canzone mandati dal browser
+  const title    = req.body.title;
+  const artist   = req.body.artist;
+  const duration = req.body.duration;
+
+  // Titolo e artista sono obbligatori
+  if (!title || !artist) {
+    return res.status(400).json({ error: 'Titolo e artista sono obbligatori' });
+  }
+
+  // Apre il database
   const db = readDB();
-  const i  = db.playlists.findIndex(p => p.id === req.params.id);
-  if (i === -1) return res.status(404).json({ error: 'Playlist non trovata' });
-  if (db.playlists[i].userId !== req.currentUser.id) return res.status(403).json({ error: 'Non autorizzato' });
-  const song = { id: genId(), title: title.trim(), artist: artist.trim(), duration: duration?.trim() || '0:00' };
-  db.playlists[i].songs.push(song);
+
+  // Cerca la posizione della playlist nell'array
+  const indice = db.playlists.findIndex(function(p) {
+    return p.id === req.params.id;
+  });
+
+  // Se la playlist non esiste → errore 404
+  if (indice === -1) {
+    return res.status(404).json({ error: 'Playlist non trovata' });
+  }
+
+  // Controlla che la playlist appartenga all'utente loggato
+  if (db.playlists[indice].userId !== req.currentUser.id) {
+    return res.status(403).json({ error: 'Non autorizzato' });
+  }
+
+  // Crea il nuovo oggetto canzone
+  const nuovaCanzone = {
+    id:       genId(),                          // ID casuale univoco
+    title:    title.trim(),                     // titolo senza spazi inutili
+    artist:   artist.trim(),                    // artista senza spazi inutili
+    duration: duration ? duration.trim() : '0:00'  // durata, default 0:00
+  };
+
+  // Aggiunge la canzone all'array songs della playlist
+  db.playlists[indice].songs.push(nuovaCanzone);
+
+  // Salva il database aggiornato
   writeDB(db);
-  res.status(201).json(song);
+
+  // Risponde con la canzone appena aggiunta (201 = "creata")
+  res.status(201).json(nuovaCanzone);
+
 });
 
-/**
- * DELETE /api/playlists/:id/songs/:songId
- * Rimuove una canzone da una playlist (solo il proprietario)
- */
-app.delete('/api/playlists/:id/songs/:songId', requireAuth, (req, res) => {
+
+// Rimuove una canzone da una playlist (richiede login)
+app.delete('/api/playlists/:id/songs/:songId', requireAuth, function(req, res) {
+
+  // Apre il database
   const db = readDB();
-  const i  = db.playlists.findIndex(p => p.id === req.params.id);
-  if (i === -1) return res.status(404).json({ error: 'Playlist non trovata' });
-  if (db.playlists[i].userId !== req.currentUser.id) return res.status(403).json({ error: 'Non autorizzato' });
-  const before = db.playlists[i].songs.length;
-  db.playlists[i].songs = db.playlists[i].songs.filter(s => s.id !== req.params.songId);
-  if (db.playlists[i].songs.length === before) return res.status(404).json({ error: 'Canzone non trovata' });
+
+  // Cerca la posizione della playlist nell'array
+  const indice = db.playlists.findIndex(function(p) {
+    return p.id === req.params.id;
+  });
+
+  // Se la playlist non esiste → errore 404
+  if (indice === -1) {
+    return res.status(404).json({ error: 'Playlist non trovata' });
+  }
+
+  // Controlla che la playlist appartenga all'utente loggato
+  if (db.playlists[indice].userId !== req.currentUser.id) {
+    return res.status(403).json({ error: 'Non autorizzato' });
+  }
+
+  // Salva il numero di canzoni prima di filtrare
+  // Serve per capire dopo se la canzone è stata trovata e rimossa
+  const numeroPrima = db.playlists[indice].songs.length;
+
+  // Ricrea l'array delle canzoni escludendo quella da eliminare
+  // filter() tiene solo le canzoni il cui ID è DIVERSO da quello da rimuovere
+  db.playlists[indice].songs = db.playlists[indice].songs.filter(function(s) {
+    return s.id !== req.params.songId;
+  });
+
+  // Se il numero di canzoni non è cambiato, la canzone non esisteva
+  if (db.playlists[indice].songs.length === numeroPrima) {
+    return res.status(404).json({ error: 'Canzone non trovata' });
+  }
+
+  // Salva il database aggiornato
   writeDB(db);
+
+  // Risponde con messaggio di conferma
   res.json({ message: 'Canzone rimossa' });
-});
 
+});
 // ============================================
 // ERROR HANDLING E FALLBACK
 // ============================================

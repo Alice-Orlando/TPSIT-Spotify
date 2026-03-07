@@ -6,151 +6,10 @@
   <title>TuneNest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #0a0a0f; --surface: #111118; --surface2: #18181f; --surface3: #22222c;
-      --border: #2a2a38; --green: #1db954; --green-glow: rgba(29,185,84,.25);
-      --text: #ffffff; --text-muted: #a0a0b0; --text-dim: #606070;
-      --red: #e84343; --radius: 12px; --radius-lg: 20px;
-      --sidebar-w: 220px; --t: .2s cubic-bezier(.4,0,.2,1);
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    #app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; height: 100vh; }
-
-    /* SIDEBAR */
-    #sidebar {
-      background: #080810; border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; padding: 24px 16px; gap: 6px; overflow-y: auto;
-    }
-    .logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--green); padding: 0 8px 20px; display: flex; align-items: center; gap: 10px; }
-    .logo span { color: var(--text); }
-    .nav-btn {
-      display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 8px;
-      border: none; background: transparent; color: var(--text-muted);
-      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-      cursor: pointer; width: 100%; text-align: left; transition: var(--t);
-    }
-    .nav-btn:hover, .nav-btn.active { background: var(--surface2); color: var(--text); }
-    .nav-btn .icon { font-size: 18px; width: 22px; text-align: center; }
-
-    /* MAIN */
-    #main { overflow-y: auto; background: linear-gradient(180deg, #1a1a28 0%, var(--bg) 340px); }
-    .topbar {
-      position: sticky; top: 0; z-index: 10;
-      display: flex; align-items: center; justify-content: flex-end;
-      padding: 16px 32px; background: rgba(10,10,15,.8);
-      backdrop-filter: blur(16px); border-bottom: 1px solid var(--border);
-    }
-    #user-avatar-chip {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 24px; padding: 6px 16px 6px 8px; cursor: pointer; transition: var(--t);
-    }
-    #user-avatar-chip:hover { background: var(--surface3); }
-    .chip-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 14px; }
-    .chip-name { font-size: 13px; font-weight: 500; }
-
-    /* PAGES */
-    .page { display: none; padding: 32px; }
-    .page.active { display: block; }
-    #page-detail { animation: fadeUp .3s ease; }
-    @keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
-
-    .page-header { margin-bottom: 32px; }
-    .page-header h1 { font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
-    .page-header p { color: var(--text-muted); font-size: 15px; }
-    .page-header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; }
-
-    /* CARDS */
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 20px; }
-    .pl-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      padding: 18px; cursor: pointer; transition: var(--t); position: relative; overflow: hidden;
-    }
-    .pl-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at top left, var(--green-glow), transparent 70%); opacity: 0; transition: var(--t); }
-    .pl-card:hover { border-color: var(--green); transform: translateY(-3px); }
-    .pl-card:hover::before { opacity: 1; }
-    .pl-card-cover { width: 100%; aspect-ratio: 1; border-radius: 10px; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 52px; margin-bottom: 16px; position: relative; overflow: hidden; }
-    .pl-card-cover-bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1db95430, #b455f520); }
-    .pl-card-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
-    .pl-card-subtitle { font-size: 12px; color: var(--text-muted); }
-    .pl-card-meta { font-size: 11px; color: var(--text-dim); margin-top: 8px; }
-
-    /* DETAIL */
-    .detail-header { display: flex; gap: 32px; align-items: flex-end; margin-bottom: 36px; padding: 32px; background: linear-gradient(180deg, #1a2a1a, transparent); border-radius: var(--radius-lg); }
-    .detail-cover { width: 160px; height: 160px; flex-shrink: 0; border-radius: var(--radius); background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 72px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-    .detail-type { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .detail-name { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -1px; line-height: 1; margin-bottom: 10px; }
-    .detail-subtitle { color: var(--text-muted); margin-bottom: 8px; }
-    .detail-meta { font-size: 13px; color: var(--text-dim); }
-    .detail-actions { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
-
-    /* BUTTONS */
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: var(--t); }
-    .btn-green { background: var(--green); color: #000; }
-    .btn-green:hover { background: #1ed760; transform: scale(1.03); }
-    .btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text-muted); }
-    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
-    .btn-danger { background: transparent; border: 1.5px solid var(--red); color: var(--red); }
-    .btn-danger:hover { background: var(--red); color: #fff; }
-    .btn-sm { padding: 6px 14px; font-size: 12px; }
-
-    /* SONGS */
-    .song-row { display: grid; grid-template-columns: 40px 1fr 1fr 80px 40px; align-items: center; gap: 16px; padding: 8px 16px; border-radius: 8px; transition: var(--t); }
-    .song-row:hover { background: var(--surface2); }
-    .song-num { color: var(--text-muted); font-size: 14px; text-align: center; }
-    .song-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .song-artist { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .song-duration { font-size: 13px; color: var(--text-muted); text-align: right; }
-    .song-delete-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 16px; opacity: 0; transition: var(--t); }
-    .song-row:hover .song-delete-btn { opacity: 1; }
-    .song-delete-btn:hover { color: var(--red); }
-    .divider { height: 1px; background: var(--border); margin: 12px 0; }
-
-    /* EMPTY */
-    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-    .empty-icon { font-size: 48px; margin-bottom: 16px; }
-    .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 20px; margin-bottom: 8px; color: var(--text); }
-
-    /* MODAL */
-    .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: var(--t); }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; width: 440px; max-width: 95vw; transform: scale(.95); transition: var(--t); }
-    .modal-overlay.open .modal { transform: scale(1); }
-    .modal-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 24px; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
-    .form-group { margin-bottom: 18px; }
-    .form-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-    .form-input { width: 100%; padding: 12px 16px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; transition: var(--t); outline: none; }
-    .form-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
-    .form-input::placeholder { color: var(--text-dim); }
-
-    /* AUTH */
-    #auth-screen { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; align-items: center; justify-content: center; }
-    .auth-card { width: 400px; max-width: 95vw; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; }
-    .auth-logo { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--green); text-align: center; margin-bottom: 8px; }
-    .auth-logo span { color: var(--text); }
-    .auth-subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
-    .auth-tabs { display: flex; background: var(--surface2); border-radius: 8px; padding: 4px; gap: 4px; margin-bottom: 28px; }
-    .auth-tab { flex: 1; padding: 8px; border-radius: 6px; border: none; background: transparent; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: var(--t); }
-    .auth-tab.active { background: var(--surface); color: var(--text); }
-
-    /* TOAST */
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); border-radius: 50px; padding: 10px 20px; font-size: 14px; opacity: 0; transition: var(--t); z-index: 999; white-space: nowrap; }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #toast.error { border-color: var(--red); color: var(--red); }
-    #toast.success { border-color: var(--green); color: var(--green); }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- ============================================
-     SCHERMATA DI AUTENTICAZIONE (Login/Registrazione)
-     ============================================ -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">🎵 Tune<span>Nest</span></div>
@@ -159,7 +18,6 @@
       <button class="auth-tab active" onclick="switchAuthTab('login')">Accedi</button>
       <button class="auth-tab" onclick="switchAuthTab('register')">Registrati</button>
     </div>
-    <!-- ---- Tab Login ---- -->
     <div id="auth-login">
       <div class="form-group">
         <label class="form-label">Username</label>
@@ -172,7 +30,6 @@
       <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doLogin()">Accedi</button>
       <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:16px">Demo: <strong>marco_beats</strong> / <strong>1234</strong></p>
     </div>
-    <!-- ---- Tab Registrazione ---- -->
     <div id="auth-register" style="display:none">
       <div class="form-group">
         <label class="form-label">Username</label>
@@ -187,20 +44,14 @@
   </div>
 </div>
 
-<!-- ============================================
-     APP PRINCIPALE (Sidebar + Main Content)
-     ============================================ -->
 <div id="app" style="display:none">
-  <!-- ---- SIDEBAR NAVIGAZIONE ---- -->
   <aside id="sidebar">
     <div class="logo">🎵 <span>TuneNest</span></div>
     <button class="nav-btn active" onclick="goPage('home', this)"><span class="icon">🏠</span> Home</button>
     <button class="nav-btn" onclick="goPage('my-playlists', this)"><span class="icon">📚</span> Le mie playlist</button>
   </aside>
 
-  <!-- ---- AREA CONTENUTI PRINCIPALE ---- -->
   <main id="main">
-    <!-- Top bar con profilo utente -->
     <div class="topbar">
       <div id="user-avatar-chip" onclick="doLogout()">
         <div class="chip-avatar" id="chip-av">🎵</div>
@@ -209,7 +60,6 @@
       </div>
     </div>
 
-    <!-- ---- PAGINA: HOME ---- -->
     <section id="page-home" class="page active">
       <div class="page-header">
         <h1 id="home-greeting">Ciao 👋</h1>
@@ -218,7 +68,6 @@
       <div id="home-grid" class="cards-grid"></div>
     </section>
 
-    <!-- ---- PAGINA: LE MIE PLAYLIST ---- -->
     <section id="page-my-playlists" class="page">
       <div class="page-header-row">
         <div class="page-header" style="margin-bottom:0">
@@ -230,16 +79,11 @@
       <div id="my-playlists-grid" class="cards-grid"></div>
     </section>
 
-    <!-- ---- PAGINA: DETTAGLIO PLAYLIST ---- -->
     <section id="page-detail" class="page">
       <div id="detail-content"></div>
     </section>
   </main>
 </div>
-
-<!-- ============================================
-     MODALI
-     ============================================ -->
 
 <!-- Modal: Crea/Modifica Playlist -->
 <div class="modal-overlay" id="modal-playlist">
@@ -285,383 +129,282 @@
   </div>
 </div>
 
-<!-- Notifiche Toast -->
 <div id="toast"></div>
 
-<!-- ============================================
-     JAVASCRIPT
-     ============================================ -->
 <script>
-  // ============================================
-  // VARIABILI GLOBALI E COSTANTI
-  // ============================================
-  let currentUser = null;
-  let playlists   = [];
+let currentUser = null;
+let playlists   = [];
 
-  // ============================================
-  // FUNZIONI UTILITY - API E HELPER
-  // ============================================
-  
-  /**
-   * Effettua una chiamata all'API del server
-   * @param {string} method - Metodo HTTP (GET, POST, PUT, DELETE)
-   * @param {string} endpoint - Endpoint dell'API
-   * @param {object} body - Corpo della richiesta (opzionale)
-   * @returns {Promise} Risposta del server
-   */
-  async function api(method, endpoint, body = null) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
-    if (currentUser) opts.headers['X-User-Id'] = currentUser.id;
-    if (body) opts.body = JSON.stringify(body);
-    const r = await fetch('/api' + endpoint, opts);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Errore server');
-    return d;
-  }
+// Invia una richiesta HTTP al server e restituisce la risposta
+async function api(method, endpoint, body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (currentUser) opts.headers['X-User-Id'] = currentUser.id;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api' + endpoint, opts);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Errore server');
+  return d;
+}
 
-  /**
-   * Escapa caratteri speciali per evitare XSS
-   * @param {string} s - Stringa da escapare
-   * @returns {string} Stringa escapata
-   */
-  function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+// Converte i caratteri speciali HTML per evitare attacchi XSS
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-  /**
-   * Mostra una notifica toast
-   * @param {string} msg - Messaggio da mostrare
-   * @param {string} tipo - Tipo di notifica (success, error)
-   */
-  function toast(msg, tipo = 'success') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = `show ${tipo}`;
-    clearTimeout(window._t);
-    window._t = setTimeout(() => el.className = '', 3000);
-  }
+// Mostra una notifica temporanea in basso allo schermo
+function toast(msg, tipo = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${tipo}`;
+  clearTimeout(window._t);
+  window._t = setTimeout(() => el.className = '', 3000);
+}
 
-  /**
-   * Apre un modal
-   * @param {string} id - ID del modal da aprire
-   */
-  function openModal(id)  { document.getElementById(id).classList.add('open'); }
-  
-  /**
-   * Chiude un modal
-   * @param {string} id - ID del modal da chiudere
-   */
-  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-  
-  // Chiude il modal quando si clicca sul background
-  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+// Apre un modal aggiungendo la classe 'open'
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 
-  // ============================================
-  // AUTENTICAZIONE
-  // ============================================
+// Chiude un modal rimuovendo la classe 'open'
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-  /**
-   * Cambia il tab di autenticazione (Login/Registrazione)
-   * @param {string} tab - Tab da mostrare ('login' o 'register')
-   */
-  function switchAuthTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
-    document.getElementById('auth-login').style.display    = tab === 'login'    ? '' : 'none';
-    document.getElementById('auth-register').style.display = tab === 'register' ? '' : 'none';
-  }
+// Chiude il modal se si clicca sullo sfondo scuro
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
 
-  /**
-   * Effettua il login
-   */
-  async function doLogin() {
-    const username = document.getElementById('login-user').value.trim();
-    const password = document.getElementById('login-pass').value;
-    if (!username || !password) return toast('Inserisci username e password', 'error');
-    try { loginSuccess((await api('POST', '/auth/login', { username, password })).user); }
-    catch(e) { toast(e.message, 'error'); }
-  }
+// ── AUTH ────────────────────────────────────────────
 
-  /**
-   * Effettua la registrazione di un nuovo utente
-   */
-  async function doRegister() {
-    const username = document.getElementById('reg-user').value.trim();
-    const password = document.getElementById('reg-pass').value;
-    if (!username || !password) return toast('Campi obbligatori mancanti', 'error');
-    try { loginSuccess((await api('POST', '/auth/register', { username, password, avatar: '🎧' })).user); }
-    catch(e) { toast(e.message, 'error'); }
-  }
+// Mostra il tab login o registrazione nella schermata iniziale
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
+  document.getElementById('auth-login').style.display    = tab === 'login'    ? '' : 'none';
+  document.getElementById('auth-register').style.display = tab === 'register' ? '' : 'none';
+}
 
-  /**
-   * Gestisce il successo del login/registrazione
-   * @param {object} user - Oggetto utente dal server
-   */
-  function loginSuccess(user) {
-    currentUser = user;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'grid';
-    document.getElementById('chip-av').textContent   = user.avatar;
-    document.getElementById('chip-name').textContent = user.username;
-    const ora = new Date().getHours();
-    document.getElementById('home-greeting').textContent =
-      (ora < 12 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera') + `, ${user.username} 👋`;
-    loadPlaylists();
-  }
+// Legge username e password e invia la richiesta di login al server
+async function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!username || !password) return toast('Inserisci username e password', 'error');
+  try { loginSuccess((await api('POST', '/auth/login', { username, password })).user); }
+  catch(e) { toast(e.message, 'error'); }
+}
 
-  /**
-   * Effettua il logout dell'utente
-   */
-  function doLogout() {
-    currentUser = null; playlists = [];
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('auth-screen').style.display = 'flex';
-  }
+// Legge username e password e crea un nuovo account sul server
+async function doRegister() {
+  const username = document.getElementById('reg-user').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  if (!username || !password) return toast('Campi obbligatori mancanti', 'error');
+  try { loginSuccess((await api('POST', '/auth/register', { username, password, avatar: '🎧' })).user); }
+  catch(e) { toast(e.message, 'error'); }
+}
 
-  // ============================================
-  // NAVIGAZIONE TRA LE PAGINE
-  // ============================================
+// Salva l'utente, nasconde il login, mostra l'app e carica le playlist
+function loginSuccess(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+  document.getElementById('chip-av').textContent   = user.avatar;
+  document.getElementById('chip-name').textContent = user.username;
+  const ora = new Date().getHours();
+  document.getElementById('home-greeting').textContent =
+    (ora < 12 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera') + `, ${user.username} 👋`;
+  loadPlaylists();
+}
 
-  /**
-   * Naviga verso una pagina specifica
-   * @param {string} id - ID della pagina
-   * @param {element} btn - Elemento bottone da attivare
-   */
-  function goPage(id, btn) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + id).classList.add('active');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    if (id === 'home') renderHome();
-    if (id === 'my-playlists') renderMyPlaylists();
-  }
+// Azzera i dati e torna alla schermata di login
+function doLogout() {
+  currentUser = null; playlists = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
 
-  // ============================================
-  // CARICAMENTO DATI PLAYLIST
-  // ============================================
+// ── NAVIGAZIONE ─────────────────────────────────────
 
-  /**
-   * Carica le playlist dal server
-   */
-  async function loadPlaylists() {
-    try {
-      playlists = await api('GET', '/playlists');
-      renderHome();
-    } catch(e) { toast('Errore caricamento', 'error'); }
-  }
+// Mostra la pagina richiesta e aggiorna il menu laterale
+function goPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (id === 'home') renderHome();
+  if (id === 'my-playlists') renderMyPlaylists();
+}
 
-  // ============================================
-  // RENDERING DELLE PAGINE
-  // ============================================
+// ── DATI ────────────────────────────────────────────
 
-  /**
-   * Genera l'HTML di una card playlist
-   * @param {object} p - Oggetto playlist
-   * @returns {string} HTML della card
-   */
-  function playlistCard(p) {
-    return `<div class="pl-card" onclick="openDetail('${p.id}')">
-      <div class="pl-card-cover"><div class="pl-card-cover-bg"></div>${p.cover}</div>
-      <div class="pl-card-name">${esc(p.name)}</div>
-      <div class="pl-card-subtitle">${esc(p.subtitle || '')}</div>
-      <div class="pl-card-meta">${p.songs.length} canzon${p.songs.length === 1 ? 'e' : 'i'}</div>
-    </div>`;
-  }
+// Scarica tutte le playlist dal server e aggiorna la home
+async function loadPlaylists() {
+  try {
+    playlists = await api('GET', '/playlists');
+    renderHome();
+  } catch(e) { toast('Errore caricamento', 'error'); }
+}
 
-  /**
-   * Genera l'HTML dello stato vuoto
-   * @param {string} icon - Emoji icona
-   * @param {string} title - Titolo
-   * @param {string} msg - Messaggio
-   * @returns {string} HTML dello stato vuoto
-   */
-  function emptyState(icon, title, msg) {
-    return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
-  }
+// ── RENDER ──────────────────────────────────────────
 
-  /**
-   * Renderizza la pagina Home
-   */
-  function renderHome() {
-    const mine = playlists.filter(p => p.userId === currentUser.id);
-    document.getElementById('home-grid').innerHTML = mine.length
-      ? mine.map(playlistCard).join('')
-      : emptyState('🎶', 'Nessuna playlist', 'Vai in <strong>Le mie playlist</strong> e crea la prima!');
-  }
+// Genera l'HTML di una singola card playlist
+function playlistCard(p) {
+  return `<div class="pl-card" onclick="openDetail('${p.id}')">
+    <div class="pl-card-cover"><div class="pl-card-cover-bg"></div>${p.cover}</div>
+    <div class="pl-card-name">${esc(p.name)}</div>
+    <div class="pl-card-subtitle">${esc(p.subtitle || '')}</div>
+    <div class="pl-card-meta">${p.songs.length} canzon${p.songs.length === 1 ? 'e' : 'i'}</div>
+  </div>`;
+}
 
-  /**
-   * Renderizza la pagina Le mie playlist
-   */
-  function renderMyPlaylists() {
-    const mine = playlists.filter(p => p.userId === currentUser.id);
-    document.getElementById('my-playlists-grid').innerHTML = mine.length
-      ? mine.map(playlistCard).join('')
-      : emptyState('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
-  }
+// Genera l'HTML per il messaggio "lista vuota"
+function emptyState(icon, title, msg) {
+  return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
+}
 
-  // ============================================
-  // DETTAGLIO PLAYLIST
-  // ============================================
+// Mostra nella home solo le playlist dell'utente loggato
+function renderHome() {
+  const mine = playlists.filter(p => p.userId === currentUser.id);
+  document.getElementById('home-grid').innerHTML = mine.length
+    ? mine.map(playlistCard).join('')
+    : emptyState('🎶', 'Nessuna playlist', 'Vai in <strong>Le mie playlist</strong> e crea la prima!');
+}
 
-  /**
-   * Apre il dettaglio di una playlist
-   * @param {string} id - ID della playlist
-   */
-  async function openDetail(id) {
-    const pl = await api('GET', '/playlists/' + id);
-    const i  = playlists.findIndex(p => p.id === id);
-    if (i > -1) playlists[i] = pl;
-    const owner = pl.userId === currentUser.id;
+// Mostra la griglia di tutte le playlist dell'utente nella pagina dedicata
+function renderMyPlaylists() {
+  const mine = playlists.filter(p => p.userId === currentUser.id);
+  document.getElementById('my-playlists-grid').innerHTML = mine.length
+    ? mine.map(playlistCard).join('')
+    : emptyState('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
+}
 
-    document.getElementById('detail-content').innerHTML = `
-      <div class="detail-header">
-        <div class="detail-cover">${pl.cover}</div>
-        <div>
-          <p class="detail-type">Playlist</p>
-          <h1 class="detail-name">${esc(pl.name)}</h1>
-          <p class="detail-subtitle">${esc(pl.subtitle || '')}</p>
-          <p class="detail-meta">di <strong>${esc(pl.author?.username || '?')}</strong> &nbsp;·&nbsp; ${pl.songs.length} canzoni</p>
-        </div>
+// ── DETTAGLIO PLAYLIST ──────────────────────────────
+
+// Carica dal server e mostra i dettagli e le canzoni di una playlist
+async function openDetail(id) {
+  const pl = await api('GET', '/playlists/' + id);
+  const i  = playlists.findIndex(p => p.id === id);
+  if (i > -1) playlists[i] = pl;
+  const owner = pl.userId === currentUser.id;
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-cover">${pl.cover}</div>
+      <div>
+        <p class="detail-type">Playlist</p>
+        <h1 class="detail-name">${esc(pl.name)}</h1>
+        <p class="detail-subtitle">${esc(pl.subtitle || '')}</p>
+        <p class="detail-meta">di <strong>${esc(pl.author?.username || '?')}</strong> &nbsp;·&nbsp; ${pl.songs.length} canzoni</p>
       </div>
-      <div class="detail-actions">
-        ${owner ? `
-          <button class="btn btn-ghost" onclick="openPlaylistModal('${pl.id}')">✏️ Modifica</button>
-          <button class="btn btn-green" onclick="openSongModal('${pl.id}')">＋ Aggiungi brano</button>
-          <button class="btn btn-danger btn-sm" onclick="deletePlaylist('${pl.id}')">🗑 Elimina</button>
-        ` : ''}
+    </div>
+    <div class="detail-actions">
+      ${owner ? `
+        <button class="btn btn-ghost" onclick="openPlaylistModal('${pl.id}')">✏️ Modifica</button>
+        <button class="btn btn-green" onclick="openSongModal('${pl.id}')">＋ Aggiungi brano</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePlaylist('${pl.id}')">🗑 Elimina</button>
+      ` : ''}
+    </div>
+    ${pl.songs.length ? `
+      <div class="song-row" style="pointer-events:none;margin-bottom:4px">
+        <div style="color:var(--text-dim);font-size:11px">#</div>
+        <div style="color:var(--text-dim);font-size:11px">TITOLO</div>
+        <div style="color:var(--text-dim);font-size:11px">ARTISTA</div>
+        <div style="color:var(--text-dim);font-size:11px;text-align:right">⏱</div>
+        <div></div>
       </div>
-      ${pl.songs.length ? `
-        <div class="song-row" style="pointer-events:none;margin-bottom:4px">
-          <div style="color:var(--text-dim);font-size:11px">#</div>
-          <div style="color:var(--text-dim);font-size:11px">TITOLO</div>
-          <div style="color:var(--text-dim);font-size:11px">ARTISTA</div>
-          <div style="color:var(--text-dim);font-size:11px;text-align:right">⏱</div>
-          <div></div>
-        </div>
-        <div class="divider" style="margin:0 0 8px"></div>
-        ${pl.songs.map((s, idx) => `
-          <div class="song-row">
-            <div class="song-num">${idx + 1}</div>
-            <div class="song-title">${esc(s.title)}</div>
-            <div class="song-artist">${esc(s.artist)}</div>
-            <div class="song-duration">${esc(s.duration || '—')}</div>
-            <div>${owner ? `<button class="song-delete-btn" onclick="deleteSong('${pl.id}','${s.id}')">✕</button>` : ''}</div>
-          </div>`).join('')}
-      ` : `<div class="empty-state"><div class="empty-icon">🎵</div><h3>Playlist vuota</h3><p>${owner ? 'Aggiungi il primo brano!' : 'Nessuna canzone.'}</p></div>`}
-    `;
+      <div class="divider" style="margin:0 0 8px"></div>
+      ${pl.songs.map((s, idx) => `
+        <div class="song-row">
+          <div class="song-num">${idx + 1}</div>
+          <div class="song-title">${esc(s.title)}</div>
+          <div class="song-artist">${esc(s.artist)}</div>
+          <div class="song-duration">${esc(s.duration || '—')}</div>
+          <div>${owner ? `<button class="song-delete-btn" onclick="deleteSong('${pl.id}','${s.id}')">✕</button>` : ''}</div>
+        </div>`).join('')}
+    ` : `<div class="empty-state"><div class="empty-icon">🎵</div><h3>Playlist vuota</h3><p>${owner ? 'Aggiungi il primo brano!' : 'Nessuna canzone.'}</p></div>`}
+  `;
 
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-detail').classList.add('active');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  }
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+}
 
-  // ============================================
-  // CRUD PLAYLIST (Create, Read, Update, Delete)
-  // ============================================
+// ── PLAYLIST CRUD ───────────────────────────────────
 
-  /**
-   * Apre il modal per creare o modificare una playlist
-   * @param {string} editId - ID della playlist da modificare (opzionale)
-   */
-  function openPlaylistModal(editId = null) {
-    document.getElementById('modal-pl-title').textContent = editId ? 'Modifica playlist' : 'Crea playlist';
-    document.getElementById('edit-pl-id').value = editId || '';
-    const pl = editId ? playlists.find(p => p.id === editId) : null;
-    document.getElementById('pl-name').value     = pl ? pl.name     : '';
-    document.getElementById('pl-subtitle').value = pl ? pl.subtitle : '';
-    openModal('modal-playlist');
-  }
+// Apre il modal per creare una nuova playlist o modificarne una esistente
+function openPlaylistModal(editId = null) {
+  document.getElementById('modal-pl-title').textContent = editId ? 'Modifica playlist' : 'Crea playlist';
+  document.getElementById('edit-pl-id').value = editId || '';
+  const pl = editId ? playlists.find(p => p.id === editId) : null;
+  document.getElementById('pl-name').value     = pl ? pl.name     : '';
+  document.getElementById('pl-subtitle').value = pl ? pl.subtitle : '';
+  openModal('modal-playlist');
+}
 
-  /**
-   * Salva una playlist (nuovo o modificato)
-   */
-  async function savePlaylist() {
-    const editId   = document.getElementById('edit-pl-id').value;
-    const name     = document.getElementById('pl-name').value.trim();
-    const subtitle = document.getElementById('pl-subtitle').value.trim();
-    if (!name) return toast('Il nome è obbligatorio', 'error');
-    try {
-      if (editId) {
-        const updated = await api('PUT', '/playlists/' + editId, { name, subtitle });
-        const i = playlists.findIndex(p => p.id === editId);
-        if (i > -1) playlists[i] = { ...playlists[i], ...updated };
-      } else {
-        playlists.push(await api('POST', '/playlists', { name, subtitle, cover: '🎵' }));
-      }
-      closeModal('modal-playlist');
-      renderHome(); renderMyPlaylists();
-      toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
-    } catch(e) { toast(e.message, 'error'); }
-  }
+// Salva la playlist: la crea se è nuova, la aggiorna se esiste già
+async function savePlaylist() {
+  const editId   = document.getElementById('edit-pl-id').value;
+  const name     = document.getElementById('pl-name').value.trim();
+  const subtitle = document.getElementById('pl-subtitle').value.trim();
+  if (!name) return toast('Il nome è obbligatorio', 'error');
+  try {
+    if (editId) {
+      const updated = await api('PUT', '/playlists/' + editId, { name, subtitle });
+      const i = playlists.findIndex(p => p.id === editId);
+      if (i > -1) playlists[i] = { ...playlists[i], ...updated };
+    } else {
+      playlists.push(await api('POST', '/playlists', { name, subtitle, cover: '🎵' }));
+    }
+    closeModal('modal-playlist');
+    renderHome(); renderMyPlaylists();
+    toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
 
-  /**
-   * Elimina una playlist
-   * @param {string} id - ID della playlist da eliminare
-   */
-  async function deletePlaylist(id) {
-    if (!confirm('Eliminare questa playlist?')) return;
-    try {
-      await api('DELETE', '/playlists/' + id);
-      playlists = playlists.filter(p => p.id !== id);
-      goPage('my-playlists', document.querySelector('[onclick*="my-playlists"]'));
-      toast('Playlist eliminata', 'success');
-    } catch(e) { toast(e.message, 'error'); }
-  }
+// Chiede conferma ed elimina la playlist dal server e dalla lista locale
+async function deletePlaylist(id) {
+  if (!confirm('Eliminare questa playlist?')) return;
+  try {
+    await api('DELETE', '/playlists/' + id);
+    playlists = playlists.filter(p => p.id !== id);
+    goPage('my-playlists', document.querySelector('[onclick*="my-playlists"]'));
+    toast('Playlist eliminata', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
 
-  // ============================================
-  // CRUD CANZONI (Create, Read, Update, Delete)
-  // ============================================
+// ── SONG CRUD ───────────────────────────────────────
 
-  /**
-   * Apre il modal per aggiungere una canzone a una playlist
-   * @param {string} playlistId - ID della playlist
-   */
-  function openSongModal(playlistId) {
-    document.getElementById('song-pl-id').value = playlistId;
-    ['song-title','song-artist','song-duration'].forEach(id => document.getElementById(id).value = '');
-    openModal('modal-song');
-  }
+// Apre il modal per aggiungere una canzone, svuotando i campi
+function openSongModal(playlistId) {
+  document.getElementById('song-pl-id').value = playlistId;
+  ['song-title','song-artist','song-duration'].forEach(id => document.getElementById(id).value = '');
+  openModal('modal-song');
+}
 
-  /**
-   * Salva una canzone in una playlist
-   */
-  async function saveSong() {
-    const playlistId = document.getElementById('song-pl-id').value;
-    const title      = document.getElementById('song-title').value.trim();
-    const artist     = document.getElementById('song-artist').value.trim();
-    const duration   = document.getElementById('song-duration').value.trim();
-    if (!title || !artist) return toast('Titolo e artista sono obbligatori', 'error');
-    try {
-      const song = await api('POST', '/playlists/' + playlistId + '/songs', { title, artist, duration });
-      const pl = playlists.find(p => p.id === playlistId);
-      if (pl) pl.songs.push(song);
-      closeModal('modal-song');
-      openDetail(playlistId);
-      toast('Canzone aggiunta!', 'success');
-    } catch(e) { toast(e.message, 'error'); }
-  }
+// Legge i campi del modal e aggiunge la canzone alla playlist sul server
+async function saveSong() {
+  const playlistId = document.getElementById('song-pl-id').value;
+  const title      = document.getElementById('song-title').value.trim();
+  const artist     = document.getElementById('song-artist').value.trim();
+  const duration   = document.getElementById('song-duration').value.trim();
+  if (!title || !artist) return toast('Titolo e artista sono obbligatori', 'error');
+  try {
+    const song = await api('POST', '/playlists/' + playlistId + '/songs', { title, artist, duration });
+    const pl = playlists.find(p => p.id === playlistId);
+    if (pl) pl.songs.push(song);
+    closeModal('modal-song');
+    openDetail(playlistId);
+    toast('Canzone aggiunta!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
 
-  /**
-   * Elimina una canzone da una playlist
-   * @param {string} playlistId - ID della playlist
-   * @param {string} songId - ID della canzone da eliminare
-   */
-  async function deleteSong(playlistId, songId) {
-    try {
-      await api('DELETE', '/playlists/' + playlistId + '/songs/' + songId);
-      const pl = playlists.find(p => p.id === playlistId);
-      if (pl) pl.songs = pl.songs.filter(s => s.id !== songId);
-      openDetail(playlistId);
-      toast('Canzone rimossa', 'success');
-    } catch(e) { toast(e.message, 'error'); }
-  }
+// Rimuove una canzone dalla playlist sul server e aggiorna la vista
+async function deleteSong(playlistId, songId) {
+  try {
+    await api('DELETE', '/playlists/' + playlistId + '/songs/' + songId);
+    const pl = playlists.find(p => p.id === playlistId);
+    if (pl) pl.songs = pl.songs.filter(s => s.id !== songId);
+    openDetail(playlistId);
+    toast('Canzone rimossa', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
 
-  // ============================================
-  // EVENT LISTENERS
-  // ============================================
-  
-  // Permette di fare login premendo Invio
-  document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// Permette di fare login premendo Invio nei campi username e password
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 </script>
 </body>
 </html>
