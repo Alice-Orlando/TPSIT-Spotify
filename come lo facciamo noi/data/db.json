@@ -23,6 +23,14 @@
       "avatar": "🎧",
       "bio": "alice puzza",
       "createdAt": "2026-03-02T06:32:20.192Z"
+    },
+    {
+      "id": "31108beb3a9f5d84",
+      "username": "c",
+      "password": "e",
+      "avatar": "🎧",
+      "bio": "",
+      "createdAt": "2026-03-07T08:54:31.160Z"
     }
   ],
   "playlists": [
@@ -103,6 +111,22 @@
         }
       ],
       "createdAt": "2026-03-02T06:32:35.959Z"
+    },
+    {
+      "id": "c94c2ac6c90ea41f",
+      "userId": "31108beb3a9f5d84",
+      "name": "alice",
+      "subtitle": "solo Nayt",
+      "cover": "🎵",
+      "songs": [
+        {
+          "id": "7582177620a90509",
+          "title": "w",
+          "artist": "e",
+          "duration": "5:2"
+        }
+      ],
+      "createdAt": "2026-03-07T08:54:46.400Z"
     }
   ]
 }

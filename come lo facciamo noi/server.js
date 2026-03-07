@@ -114,7 +114,7 @@ app.delete('/api/playlists/:id/songs/:songId', requireAuth, (req, res) => {
   res.json({ message: 'Canzone rimossa' });
 });
 
-app.use('/api/*', (req, res) => res.status(404).json({ error: 'Endpoint non trovato' }));
+app.use('/api/*path', (req, res) => res.status(404).json({ error: 'Endpoint non trovato' }));
 app.use((err, req, res, next) => { console.error(err); res.status(500).json({ error: 'Errore interno' }); });
 
 app.listen(PORT, () => console.log(`🎵 TuneNest → http://localhost:${PORT}`));
