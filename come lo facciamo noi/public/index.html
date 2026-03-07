@@ -148,6 +148,9 @@
 </head>
 <body>
 
+<!-- ============================================
+     SCHERMATA DI AUTENTICAZIONE (Login/Registrazione)
+     ============================================ -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">🎵 Tune<span>Nest</span></div>
@@ -156,6 +159,7 @@
       <button class="auth-tab active" onclick="switchAuthTab('login')">Accedi</button>
       <button class="auth-tab" onclick="switchAuthTab('register')">Registrati</button>
     </div>
+    <!-- ---- Tab Login ---- -->
     <div id="auth-login">
       <div class="form-group">
         <label class="form-label">Username</label>
@@ -168,6 +172,7 @@
       <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doLogin()">Accedi</button>
       <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:16px">Demo: <strong>marco_beats</strong> / <strong>1234</strong></p>
     </div>
+    <!-- ---- Tab Registrazione ---- -->
     <div id="auth-register" style="display:none">
       <div class="form-group">
         <label class="form-label">Username</label>
@@ -182,14 +187,20 @@
   </div>
 </div>
 
+<!-- ============================================
+     APP PRINCIPALE (Sidebar + Main Content)
+     ============================================ -->
 <div id="app" style="display:none">
+  <!-- ---- SIDEBAR NAVIGAZIONE ---- -->
   <aside id="sidebar">
     <div class="logo">🎵 <span>TuneNest</span></div>
     <button class="nav-btn active" onclick="goPage('home', this)"><span class="icon">🏠</span> Home</button>
     <button class="nav-btn" onclick="goPage('my-playlists', this)"><span class="icon">📚</span> Le mie playlist</button>
   </aside>
 
+  <!-- ---- AREA CONTENUTI PRINCIPALE ---- -->
   <main id="main">
+    <!-- Top bar con profilo utente -->
     <div class="topbar">
       <div id="user-avatar-chip" onclick="doLogout()">
         <div class="chip-avatar" id="chip-av">🎵</div>
@@ -198,6 +209,7 @@
       </div>
     </div>
 
+    <!-- ---- PAGINA: HOME ---- -->
     <section id="page-home" class="page active">
       <div class="page-header">
         <h1 id="home-greeting">Ciao 👋</h1>
@@ -206,6 +218,7 @@
       <div id="home-grid" class="cards-grid"></div>
     </section>
 
+    <!-- ---- PAGINA: LE MIE PLAYLIST ---- -->
     <section id="page-my-playlists" class="page">
       <div class="page-header-row">
         <div class="page-header" style="margin-bottom:0">
@@ -217,11 +230,16 @@
       <div id="my-playlists-grid" class="cards-grid"></div>
     </section>
 
+    <!-- ---- PAGINA: DETTAGLIO PLAYLIST ---- -->
     <section id="page-detail" class="page">
       <div id="detail-content"></div>
     </section>
   </main>
 </div>
+
+<!-- ============================================
+     MODALI
+     ============================================ -->
 
 <!-- Modal: Crea/Modifica Playlist -->
 <div class="modal-overlay" id="modal-playlist">
@@ -267,248 +285,383 @@
   </div>
 </div>
 
+<!-- Notifiche Toast -->
 <div id="toast"></div>
 
+<!-- ============================================
+     JAVASCRIPT
+     ============================================ -->
 <script>
-let currentUser = null;
-let playlists   = [];
+  // ============================================
+  // VARIABILI GLOBALI E COSTANTI
+  // ============================================
+  let currentUser = null;
+  let playlists   = [];
 
-async function api(method, endpoint, body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (currentUser) opts.headers['X-User-Id'] = currentUser.id;
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch('/api' + endpoint, opts);
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Errore server');
-  return d;
-}
+  // ============================================
+  // FUNZIONI UTILITY - API E HELPER
+  // ============================================
+  
+  /**
+   * Effettua una chiamata all'API del server
+   * @param {string} method - Metodo HTTP (GET, POST, PUT, DELETE)
+   * @param {string} endpoint - Endpoint dell'API
+   * @param {object} body - Corpo della richiesta (opzionale)
+   * @returns {Promise} Risposta del server
+   */
+  async function api(method, endpoint, body = null) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (currentUser) opts.headers['X-User-Id'] = currentUser.id;
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch('/api' + endpoint, opts);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Errore server');
+    return d;
+  }
 
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+  /**
+   * Escapa caratteri speciali per evitare XSS
+   * @param {string} s - Stringa da escapare
+   * @returns {string} Stringa escapata
+   */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
-function toast(msg, tipo = 'success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `show ${tipo}`;
-  clearTimeout(window._t);
-  window._t = setTimeout(() => el.className = '', 3000);
-}
+  /**
+   * Mostra una notifica toast
+   * @param {string} msg - Messaggio da mostrare
+   * @param {string} tipo - Tipo di notifica (success, error)
+   */
+  function toast(msg, tipo = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${tipo}`;
+    clearTimeout(window._t);
+    window._t = setTimeout(() => el.className = '', 3000);
+  }
 
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+  /**
+   * Apre un modal
+   * @param {string} id - ID del modal da aprire
+   */
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  
+  /**
+   * Chiude un modal
+   * @param {string} id - ID del modal da chiudere
+   */
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  
+  // Chiude il modal quando si clicca sul background
+  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
 
-// AUTH
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
-  document.getElementById('auth-login').style.display    = tab === 'login'    ? '' : 'none';
-  document.getElementById('auth-register').style.display = tab === 'register' ? '' : 'none';
-}
+  // ============================================
+  // AUTENTICAZIONE
+  // ============================================
 
-async function doLogin() {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  if (!username || !password) return toast('Inserisci username e password', 'error');
-  try { loginSuccess((await api('POST', '/auth/login', { username, password })).user); }
-  catch(e) { toast(e.message, 'error'); }
-}
+  /**
+   * Cambia il tab di autenticazione (Login/Registrazione)
+   * @param {string} tab - Tab da mostrare ('login' o 'register')
+   */
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
+    document.getElementById('auth-login').style.display    = tab === 'login'    ? '' : 'none';
+    document.getElementById('auth-register').style.display = tab === 'register' ? '' : 'none';
+  }
 
-async function doRegister() {
-  const username = document.getElementById('reg-user').value.trim();
-  const password = document.getElementById('reg-pass').value;
-  if (!username || !password) return toast('Campi obbligatori mancanti', 'error');
-  try { loginSuccess((await api('POST', '/auth/register', { username, password, avatar: '🎧' })).user); }
-  catch(e) { toast(e.message, 'error'); }
-}
+  /**
+   * Effettua il login
+   */
+  async function doLogin() {
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    if (!username || !password) return toast('Inserisci username e password', 'error');
+    try { loginSuccess((await api('POST', '/auth/login', { username, password })).user); }
+    catch(e) { toast(e.message, 'error'); }
+  }
 
-function loginSuccess(user) {
-  currentUser = user;
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'grid';
-  document.getElementById('chip-av').textContent   = user.avatar;
-  document.getElementById('chip-name').textContent = user.username;
-  const ora = new Date().getHours();
-  document.getElementById('home-greeting').textContent =
-    (ora < 12 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera') + `, ${user.username} 👋`;
-  loadPlaylists();
-}
+  /**
+   * Effettua la registrazione di un nuovo utente
+   */
+  async function doRegister() {
+    const username = document.getElementById('reg-user').value.trim();
+    const password = document.getElementById('reg-pass').value;
+    if (!username || !password) return toast('Campi obbligatori mancanti', 'error');
+    try { loginSuccess((await api('POST', '/auth/register', { username, password, avatar: '🎧' })).user); }
+    catch(e) { toast(e.message, 'error'); }
+  }
 
-function doLogout() {
-  currentUser = null; playlists = [];
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
-}
+  /**
+   * Gestisce il successo del login/registrazione
+   * @param {object} user - Oggetto utente dal server
+   */
+  function loginSuccess(user) {
+    currentUser = user;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'grid';
+    document.getElementById('chip-av').textContent   = user.avatar;
+    document.getElementById('chip-name').textContent = user.username;
+    const ora = new Date().getHours();
+    document.getElementById('home-greeting').textContent =
+      (ora < 12 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera') + `, ${user.username} 👋`;
+    loadPlaylists();
+  }
 
-// NAVIGAZIONE
-function goPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  if (id === 'home') renderHome();
-  if (id === 'my-playlists') renderMyPlaylists();
-}
+  /**
+   * Effettua il logout dell'utente
+   */
+  function doLogout() {
+    currentUser = null; playlists = [];
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
 
-// DATI
-async function loadPlaylists() {
-  try {
-    playlists = await api('GET', '/playlists');
-    renderHome();
-  } catch(e) { toast('Errore caricamento', 'error'); }
-}
+  // ============================================
+  // NAVIGAZIONE TRA LE PAGINE
+  // ============================================
 
-// RENDER
-function playlistCard(p) {
-  return `<div class="pl-card" onclick="openDetail('${p.id}')">
-    <div class="pl-card-cover"><div class="pl-card-cover-bg"></div>${p.cover}</div>
-    <div class="pl-card-name">${esc(p.name)}</div>
-    <div class="pl-card-subtitle">${esc(p.subtitle || '')}</div>
-    <div class="pl-card-meta">${p.songs.length} canzon${p.songs.length === 1 ? 'e' : 'i'}</div>
-  </div>`;
-}
+  /**
+   * Naviga verso una pagina specifica
+   * @param {string} id - ID della pagina
+   * @param {element} btn - Elemento bottone da attivare
+   */
+  function goPage(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (id === 'home') renderHome();
+    if (id === 'my-playlists') renderMyPlaylists();
+  }
 
-function emptyState(icon, title, msg) {
-  return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
-}
+  // ============================================
+  // CARICAMENTO DATI PLAYLIST
+  // ============================================
 
-function renderHome() {
-  const mine = playlists.filter(p => p.userId === currentUser.id);
-  document.getElementById('home-grid').innerHTML = mine.length
-    ? mine.map(playlistCard).join('')
-    : emptyState('🎶', 'Nessuna playlist', 'Vai in <strong>Le mie playlist</strong> e crea la prima!');
-}
+  /**
+   * Carica le playlist dal server
+   */
+  async function loadPlaylists() {
+    try {
+      playlists = await api('GET', '/playlists');
+      renderHome();
+    } catch(e) { toast('Errore caricamento', 'error'); }
+  }
 
-function renderMyPlaylists() {
-  const mine = playlists.filter(p => p.userId === currentUser.id);
-  document.getElementById('my-playlists-grid').innerHTML = mine.length
-    ? mine.map(playlistCard).join('')
-    : emptyState('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
-}
+  // ============================================
+  // RENDERING DELLE PAGINE
+  // ============================================
 
-// DETTAGLIO PLAYLIST
-async function openDetail(id) {
-  const pl = await api('GET', '/playlists/' + id);
-  const i  = playlists.findIndex(p => p.id === id);
-  if (i > -1) playlists[i] = pl;
-  const owner = pl.userId === currentUser.id;
+  /**
+   * Genera l'HTML di una card playlist
+   * @param {object} p - Oggetto playlist
+   * @returns {string} HTML della card
+   */
+  function playlistCard(p) {
+    return `<div class="pl-card" onclick="openDetail('${p.id}')">
+      <div class="pl-card-cover"><div class="pl-card-cover-bg"></div>${p.cover}</div>
+      <div class="pl-card-name">${esc(p.name)}</div>
+      <div class="pl-card-subtitle">${esc(p.subtitle || '')}</div>
+      <div class="pl-card-meta">${p.songs.length} canzon${p.songs.length === 1 ? 'e' : 'i'}</div>
+    </div>`;
+  }
 
-  document.getElementById('detail-content').innerHTML = `
-    <div class="detail-header">
-      <div class="detail-cover">${pl.cover}</div>
-      <div>
-        <p class="detail-type">Playlist</p>
-        <h1 class="detail-name">${esc(pl.name)}</h1>
-        <p class="detail-subtitle">${esc(pl.subtitle || '')}</p>
-        <p class="detail-meta">di <strong>${esc(pl.author?.username || '?')}</strong> &nbsp;·&nbsp; ${pl.songs.length} canzoni</p>
+  /**
+   * Genera l'HTML dello stato vuoto
+   * @param {string} icon - Emoji icona
+   * @param {string} title - Titolo
+   * @param {string} msg - Messaggio
+   * @returns {string} HTML dello stato vuoto
+   */
+  function emptyState(icon, title, msg) {
+    return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
+  }
+
+  /**
+   * Renderizza la pagina Home
+   */
+  function renderHome() {
+    const mine = playlists.filter(p => p.userId === currentUser.id);
+    document.getElementById('home-grid').innerHTML = mine.length
+      ? mine.map(playlistCard).join('')
+      : emptyState('🎶', 'Nessuna playlist', 'Vai in <strong>Le mie playlist</strong> e crea la prima!');
+  }
+
+  /**
+   * Renderizza la pagina Le mie playlist
+   */
+  function renderMyPlaylists() {
+    const mine = playlists.filter(p => p.userId === currentUser.id);
+    document.getElementById('my-playlists-grid').innerHTML = mine.length
+      ? mine.map(playlistCard).join('')
+      : emptyState('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
+  }
+
+  // ============================================
+  // DETTAGLIO PLAYLIST
+  // ============================================
+
+  /**
+   * Apre il dettaglio di una playlist
+   * @param {string} id - ID della playlist
+   */
+  async function openDetail(id) {
+    const pl = await api('GET', '/playlists/' + id);
+    const i  = playlists.findIndex(p => p.id === id);
+    if (i > -1) playlists[i] = pl;
+    const owner = pl.userId === currentUser.id;
+
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-header">
+        <div class="detail-cover">${pl.cover}</div>
+        <div>
+          <p class="detail-type">Playlist</p>
+          <h1 class="detail-name">${esc(pl.name)}</h1>
+          <p class="detail-subtitle">${esc(pl.subtitle || '')}</p>
+          <p class="detail-meta">di <strong>${esc(pl.author?.username || '?')}</strong> &nbsp;·&nbsp; ${pl.songs.length} canzoni</p>
+        </div>
       </div>
-    </div>
-    <div class="detail-actions">
-      ${owner ? `
-        <button class="btn btn-ghost" onclick="openPlaylistModal('${pl.id}')">✏️ Modifica</button>
-        <button class="btn btn-green" onclick="openSongModal('${pl.id}')">＋ Aggiungi brano</button>
-        <button class="btn btn-danger btn-sm" onclick="deletePlaylist('${pl.id}')">🗑 Elimina</button>
-      ` : ''}
-    </div>
-    ${pl.songs.length ? `
-      <div class="song-row" style="pointer-events:none;margin-bottom:4px">
-        <div style="color:var(--text-dim);font-size:11px">#</div>
-        <div style="color:var(--text-dim);font-size:11px">TITOLO</div>
-        <div style="color:var(--text-dim);font-size:11px">ARTISTA</div>
-        <div style="color:var(--text-dim);font-size:11px;text-align:right">⏱</div>
-        <div></div>
+      <div class="detail-actions">
+        ${owner ? `
+          <button class="btn btn-ghost" onclick="openPlaylistModal('${pl.id}')">✏️ Modifica</button>
+          <button class="btn btn-green" onclick="openSongModal('${pl.id}')">＋ Aggiungi brano</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePlaylist('${pl.id}')">🗑 Elimina</button>
+        ` : ''}
       </div>
-      <div class="divider" style="margin:0 0 8px"></div>
-      ${pl.songs.map((s, idx) => `
-        <div class="song-row">
-          <div class="song-num">${idx + 1}</div>
-          <div class="song-title">${esc(s.title)}</div>
-          <div class="song-artist">${esc(s.artist)}</div>
-          <div class="song-duration">${esc(s.duration || '—')}</div>
-          <div>${owner ? `<button class="song-delete-btn" onclick="deleteSong('${pl.id}','${s.id}')">✕</button>` : ''}</div>
-        </div>`).join('')}
-    ` : `<div class="empty-state"><div class="empty-icon">🎵</div><h3>Playlist vuota</h3><p>${owner ? 'Aggiungi il primo brano!' : 'Nessuna canzone.'}</p></div>`}
-  `;
+      ${pl.songs.length ? `
+        <div class="song-row" style="pointer-events:none;margin-bottom:4px">
+          <div style="color:var(--text-dim);font-size:11px">#</div>
+          <div style="color:var(--text-dim);font-size:11px">TITOLO</div>
+          <div style="color:var(--text-dim);font-size:11px">ARTISTA</div>
+          <div style="color:var(--text-dim);font-size:11px;text-align:right">⏱</div>
+          <div></div>
+        </div>
+        <div class="divider" style="margin:0 0 8px"></div>
+        ${pl.songs.map((s, idx) => `
+          <div class="song-row">
+            <div class="song-num">${idx + 1}</div>
+            <div class="song-title">${esc(s.title)}</div>
+            <div class="song-artist">${esc(s.artist)}</div>
+            <div class="song-duration">${esc(s.duration || '—')}</div>
+            <div>${owner ? `<button class="song-delete-btn" onclick="deleteSong('${pl.id}','${s.id}')">✕</button>` : ''}</div>
+          </div>`).join('')}
+      ` : `<div class="empty-state"><div class="empty-icon">🎵</div><h3>Playlist vuota</h3><p>${owner ? 'Aggiungi il primo brano!' : 'Nessuna canzone.'}</p></div>`}
+    `;
 
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-detail').classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-}
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-detail').classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  }
 
-// PLAYLIST CRUD
-function openPlaylistModal(editId = null) {
-  document.getElementById('modal-pl-title').textContent = editId ? 'Modifica playlist' : 'Crea playlist';
-  document.getElementById('edit-pl-id').value = editId || '';
-  const pl = editId ? playlists.find(p => p.id === editId) : null;
-  document.getElementById('pl-name').value     = pl ? pl.name     : '';
-  document.getElementById('pl-subtitle').value = pl ? pl.subtitle : '';
-  openModal('modal-playlist');
-}
+  // ============================================
+  // CRUD PLAYLIST (Create, Read, Update, Delete)
+  // ============================================
 
-async function savePlaylist() {
-  const editId   = document.getElementById('edit-pl-id').value;
-  const name     = document.getElementById('pl-name').value.trim();
-  const subtitle = document.getElementById('pl-subtitle').value.trim();
-  if (!name) return toast('Il nome è obbligatorio', 'error');
-  try {
-    if (editId) {
-      const updated = await api('PUT', '/playlists/' + editId, { name, subtitle });
-      const i = playlists.findIndex(p => p.id === editId);
-      if (i > -1) playlists[i] = { ...playlists[i], ...updated };
-    } else {
-      playlists.push(await api('POST', '/playlists', { name, subtitle, cover: '🎵' }));
-    }
-    closeModal('modal-playlist');
-    renderHome(); renderMyPlaylists();
-    toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+  /**
+   * Apre il modal per creare o modificare una playlist
+   * @param {string} editId - ID della playlist da modificare (opzionale)
+   */
+  function openPlaylistModal(editId = null) {
+    document.getElementById('modal-pl-title').textContent = editId ? 'Modifica playlist' : 'Crea playlist';
+    document.getElementById('edit-pl-id').value = editId || '';
+    const pl = editId ? playlists.find(p => p.id === editId) : null;
+    document.getElementById('pl-name').value     = pl ? pl.name     : '';
+    document.getElementById('pl-subtitle').value = pl ? pl.subtitle : '';
+    openModal('modal-playlist');
+  }
 
-async function deletePlaylist(id) {
-  if (!confirm('Eliminare questa playlist?')) return;
-  try {
-    await api('DELETE', '/playlists/' + id);
-    playlists = playlists.filter(p => p.id !== id);
-    goPage('my-playlists', document.querySelector('[onclick*="my-playlists"]'));
-    toast('Playlist eliminata', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+  /**
+   * Salva una playlist (nuovo o modificato)
+   */
+  async function savePlaylist() {
+    const editId   = document.getElementById('edit-pl-id').value;
+    const name     = document.getElementById('pl-name').value.trim();
+    const subtitle = document.getElementById('pl-subtitle').value.trim();
+    if (!name) return toast('Il nome è obbligatorio', 'error');
+    try {
+      if (editId) {
+        const updated = await api('PUT', '/playlists/' + editId, { name, subtitle });
+        const i = playlists.findIndex(p => p.id === editId);
+        if (i > -1) playlists[i] = { ...playlists[i], ...updated };
+      } else {
+        playlists.push(await api('POST', '/playlists', { name, subtitle, cover: '🎵' }));
+      }
+      closeModal('modal-playlist');
+      renderHome(); renderMyPlaylists();
+      toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
 
-// SONG CRUD
-function openSongModal(playlistId) {
-  document.getElementById('song-pl-id').value = playlistId;
-  ['song-title','song-artist','song-duration'].forEach(id => document.getElementById(id).value = '');
-  openModal('modal-song');
-}
+  /**
+   * Elimina una playlist
+   * @param {string} id - ID della playlist da eliminare
+   */
+  async function deletePlaylist(id) {
+    if (!confirm('Eliminare questa playlist?')) return;
+    try {
+      await api('DELETE', '/playlists/' + id);
+      playlists = playlists.filter(p => p.id !== id);
+      goPage('my-playlists', document.querySelector('[onclick*="my-playlists"]'));
+      toast('Playlist eliminata', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
 
-async function saveSong() {
-  const playlistId = document.getElementById('song-pl-id').value;
-  const title      = document.getElementById('song-title').value.trim();
-  const artist     = document.getElementById('song-artist').value.trim();
-  const duration   = document.getElementById('song-duration').value.trim();
-  if (!title || !artist) return toast('Titolo e artista sono obbligatori', 'error');
-  try {
-    const song = await api('POST', '/playlists/' + playlistId + '/songs', { title, artist, duration });
-    const pl = playlists.find(p => p.id === playlistId);
-    if (pl) pl.songs.push(song);
-    closeModal('modal-song');
-    openDetail(playlistId);
-    toast('Canzone aggiunta!', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+  // ============================================
+  // CRUD CANZONI (Create, Read, Update, Delete)
+  // ============================================
 
-async function deleteSong(playlistId, songId) {
-  try {
-    await api('DELETE', '/playlists/' + playlistId + '/songs/' + songId);
-    const pl = playlists.find(p => p.id === playlistId);
-    if (pl) pl.songs = pl.songs.filter(s => s.id !== songId);
-    openDetail(playlistId);
-    toast('Canzone rimossa', 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+  /**
+   * Apre il modal per aggiungere una canzone a una playlist
+   * @param {string} playlistId - ID della playlist
+   */
+  function openSongModal(playlistId) {
+    document.getElementById('song-pl-id').value = playlistId;
+    ['song-title','song-artist','song-duration'].forEach(id => document.getElementById(id).value = '');
+    openModal('modal-song');
+  }
 
-document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  /**
+   * Salva una canzone in una playlist
+   */
+  async function saveSong() {
+    const playlistId = document.getElementById('song-pl-id').value;
+    const title      = document.getElementById('song-title').value.trim();
+    const artist     = document.getElementById('song-artist').value.trim();
+    const duration   = document.getElementById('song-duration').value.trim();
+    if (!title || !artist) return toast('Titolo e artista sono obbligatori', 'error');
+    try {
+      const song = await api('POST', '/playlists/' + playlistId + '/songs', { title, artist, duration });
+      const pl = playlists.find(p => p.id === playlistId);
+      if (pl) pl.songs.push(song);
+      closeModal('modal-song');
+      openDetail(playlistId);
+      toast('Canzone aggiunta!', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  /**
+   * Elimina una canzone da una playlist
+   * @param {string} playlistId - ID della playlist
+   * @param {string} songId - ID della canzone da eliminare
+   */
+  async function deleteSong(playlistId, songId) {
+    try {
+      await api('DELETE', '/playlists/' + playlistId + '/songs/' + songId);
+      const pl = playlists.find(p => p.id === playlistId);
+      if (pl) pl.songs = pl.songs.filter(s => s.id !== songId);
+      openDetail(playlistId);
+      toast('Canzone rimossa', 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ============================================
+  // EVENT LISTENERS
+  // ============================================
+  
+  // Permette di fare login premendo Invio
+  document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 </script>
 </body>
 </html>
