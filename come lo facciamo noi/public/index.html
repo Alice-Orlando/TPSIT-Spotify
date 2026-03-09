@@ -28,7 +28,6 @@
         <input class="form-input" id="login-pass" type="password" placeholder="••••••••" />
       </div>
       <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doLogin()">Accedi</button>
-      <p style="font-size:12px;color:var(--text-dim);text-align:center;margin-top:16px">Demo: <strong>marco_beats</strong> / <strong>1234</strong></p>
     </div>
     <div id="auth-register" style="display:none">
       <div class="form-group">
@@ -146,7 +145,7 @@ async function api(method, endpoint, body = null) {
   return d;
 }
 
-// Converte i caratteri speciali HTML per evitare attacchi XSS
+// Converte i caratteri speciali HTML (<, >, &, ") 
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
