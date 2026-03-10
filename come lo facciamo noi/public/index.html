@@ -13,41 +13,20 @@
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">🎵 Tune<span>Nest</span></div>
-    <p class="auth-subtitle">La tua musica, le tue playlist</p>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Accedi</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Registrati</button>
+    <p class="auth-subtitle">Inserisci il tuo nome per entrare</p>
+    <div class="form-group" style="margin-top:28px">
+      <label class="form-label">Username</label>
+      <input class="form-input" id="auth-user" placeholder="Es. marco_beats" />
     </div>
-    <div id="auth-login">
-      <div class="form-group">
-        <label class="form-label">Username</label>
-        <input class="form-input" id="login-user" placeholder="Il tuo username" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" id="login-pass" type="password" placeholder="••••••••" />
-      </div>
-      <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doLogin()">Accedi</button>
-    </div>
-    <div id="auth-register" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Username</label>
-        <input class="form-input" id="reg-user" placeholder="Scegli un username" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" id="reg-pass" type="password" placeholder="••••••••" />
-      </div>
-      <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doRegister()">Crea account</button>
-    </div>
+    <p id="auth-hint" style="font-size:12px;color:var(--text-dim);min-height:18px;margin-bottom:16px"></p>
+    <button class="btn btn-green" style="width:100%;justify-content:center" onclick="doAuth()">Entra</button>
   </div>
 </div>
 
 <div id="app" style="display:none">
   <aside id="sidebar">
     <div class="logo">🎵 <span>TuneNest</span></div>
-    <button class="nav-btn active" onclick="goPage('home', this)"><span class="icon">🏠</span> Home</button>
-    <button class="nav-btn" onclick="goPage('my-playlists', this)"><span class="icon">📚</span> Le mie playlist</button>
+    <button class="nav-btn active"><span class="icon">📚</span> Le mie playlist</button>
   </aside>
 
   <main id="main">
@@ -59,15 +38,7 @@
       </div>
     </div>
 
-    <section id="page-home" class="page active">
-      <div class="page-header">
-        <h1 id="home-greeting">Ciao 👋</h1>
-        <p>Le tue playlist recenti</p>
-      </div>
-      <div id="home-grid" class="cards-grid"></div>
-    </section>
-
-    <section id="page-my-playlists" class="page">
+    <section id="page-my-playlists" class="page active">
       <div class="page-header-row">
         <div class="page-header" style="margin-bottom:0">
           <h1>Le mie playlist</h1>
@@ -145,7 +116,7 @@ async function api(method, endpoint, body = null) {
   return d;
 }
 
-// Converte i caratteri speciali HTML (<, >, &, ") 
+// Converte i caratteri speciali HTML per evitare attacchi XSS
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -170,29 +141,55 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 
 // ── AUTH ────────────────────────────────────────────
 
-// Mostra il tab login o registrazione nella schermata iniziale
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
-  document.getElementById('auth-login').style.display    = tab === 'login'    ? '' : 'none';
-  document.getElementById('auth-register').style.display = tab === 'register' ? '' : 'none';
-}
+// Mostra un suggerimento mentre l'utente digita il nome
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('auth-user');
+  if (input) {
+    input.addEventListener('input', async () => {
+      const val = input.value.trim();
+      const hint = document.getElementById('auth-hint');
+      if (!val) { hint.textContent = ''; return; }
+      try {
+        const all = await fetch('/api/playlists').then(r => r.json());
+        // Usiamo le playlist per capire quali utenti esistono (non abbiamo un endpoint /users)
+        // Leggiamo dal db tramite un login "silenzioso" — semplicemente proviamo
+        hint.textContent = '';
+      } catch(e) {}
+    });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+  }
+});
 
-// Legge username e password e invia la richiesta di login al server
-async function doLogin() {
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-  if (!username || !password) return toast('Inserisci username e password', 'error');
-  try { loginSuccess((await api('POST', '/auth/login', { username, password })).user); }
-  catch(e) { toast(e.message, 'error'); }
-}
-
-// Legge username e password e crea un nuovo account sul server
-async function doRegister() {
-  const username = document.getElementById('reg-user').value.trim();
-  const password = document.getElementById('reg-pass').value;
-  if (!username || !password) return toast('Campi obbligatori mancanti', 'error');
-  try { loginSuccess((await api('POST', '/auth/register', { username, password, avatar: '🎧' })).user); }
-  catch(e) { toast(e.message, 'error'); }
+// Prova prima il login; se l'utente non esiste lo registra automaticamente
+async function doAuth() {
+  const username = document.getElementById('auth-user').value.trim();
+  if (!username) return toast('Inserisci un username', 'error');
+  try {
+    // Prova login solo con username
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      loginSuccess(data.user);
+    } else {
+      // Utente non trovato → lo creiamo
+      const reg = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, avatar: '🎧' })
+      });
+      if (!reg.ok) {
+        const err = await reg.json();
+        throw new Error(err.error || 'Errore registrazione');
+      }
+      const data = await reg.json();
+      loginSuccess(data.user);
+      toast('Benvenuto, ' + username + '! 🎉', 'success');
+    }
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // Salva l'utente, nasconde il login, mostra l'app e carica le playlist
@@ -202,9 +199,6 @@ function loginSuccess(user) {
   document.getElementById('app').style.display = 'grid';
   document.getElementById('chip-av').textContent   = user.avatar;
   document.getElementById('chip-name').textContent = user.username;
-  const ora = new Date().getHours();
-  document.getElementById('home-greeting').textContent =
-    (ora < 12 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera') + `, ${user.username} 👋`;
   loadPlaylists();
 }
 
@@ -217,23 +211,21 @@ function doLogout() {
 
 // ── NAVIGAZIONE ─────────────────────────────────────
 
-// Mostra la pagina richiesta e aggiorna il menu laterale
-function goPage(id, btn) {
+// Torna alla pagina principale Le mie playlist
+function goMyPlaylists() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  if (id === 'home') renderHome();
-  if (id === 'my-playlists') renderMyPlaylists();
+  document.getElementById('page-my-playlists').classList.add('active');
+  document.querySelector('.nav-btn').classList.add('active');
+  renderMyPlaylists();
 }
 
 // ── DATI ────────────────────────────────────────────
 
-// Scarica tutte le playlist dal server e aggiorna la home
+// Scarica tutte le playlist dal server e aggiorna la pagina
 async function loadPlaylists() {
   try {
     playlists = await api('GET', '/playlists');
-    renderHome();
+    renderMyPlaylists();
   } catch(e) { toast('Errore caricamento', 'error'); }
 }
 
@@ -254,15 +246,7 @@ function emptyState(icon, title, msg) {
   return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
 }
 
-// Mostra nella home solo le playlist dell'utente loggato
-function renderHome() {
-  const mine = playlists.filter(p => p.userId === currentUser.id);
-  document.getElementById('home-grid').innerHTML = mine.length
-    ? mine.map(playlistCard).join('')
-    : emptyState('🎶', 'Nessuna playlist', 'Vai in <strong>Le mie playlist</strong> e crea la prima!');
-}
-
-// Mostra la griglia di tutte le playlist dell'utente nella pagina dedicata
+// Mostra la griglia di tutte le playlist dell'utente
 function renderMyPlaylists() {
   const mine = playlists.filter(p => p.userId === currentUser.id);
   document.getElementById('my-playlists-grid').innerHTML = mine.length
@@ -290,6 +274,7 @@ async function openDetail(id) {
       </div>
     </div>
     <div class="detail-actions">
+      <button class="btn btn-ghost" onclick="goMyPlaylists()">← Indietro</button>
       ${owner ? `
         <button class="btn btn-ghost" onclick="openPlaylistModal('${pl.id}')">✏️ Modifica</button>
         <button class="btn btn-green" onclick="openSongModal('${pl.id}')">＋ Aggiungi brano</button>
@@ -318,7 +303,7 @@ async function openDetail(id) {
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-detail').classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.nav-btn').classList.remove('active');
 }
 
 // ── PLAYLIST CRUD ───────────────────────────────────
@@ -348,7 +333,7 @@ async function savePlaylist() {
       playlists.push(await api('POST', '/playlists', { name, subtitle, cover: '🎵' }));
     }
     closeModal('modal-playlist');
-    renderHome(); renderMyPlaylists();
+    renderMyPlaylists();
     toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
   } catch(e) { toast(e.message, 'error'); }
 }
@@ -359,7 +344,7 @@ async function deletePlaylist(id) {
   try {
     await api('DELETE', '/playlists/' + id);
     playlists = playlists.filter(p => p.id !== id);
-    goPage('my-playlists', document.querySelector('[onclick*="my-playlists"]'));
+    goMyPlaylists();
     toast('Playlist eliminata', 'success');
   } catch(e) { toast(e.message, 'error'); }
 }
@@ -401,9 +386,7 @@ async function deleteSong(playlistId, songId) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
-// Permette di fare login premendo Invio nei campi username e password
-document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
 </script>
 </body>
 </html>
