@@ -1,108 +1,40 @@
 {
   "users": [
     {
-      "id": "u1",
-      "username": "marco_beats",
-      "password": "1234",
+      "id": "f61b279c8368eddf",
+      "username": "dany",
       "avatar": "🎧",
-      "bio": "Amo la musica elettronica",
-      "createdAt": "2024-01-10T10:00:00Z"
+      "bio": "",
+      "createdAt": "2026-03-10T17:47:21.370Z"
     }
   ],
   "playlists": [
     {
-      "id": "p1",
-      "userId": "u1",
-      "name": "Chill Session",
-      "subtitle": "Per le serate tranquille 🌙",
-      "cover": "🌊",
-      "songs": [
-        {
-          "id": "s1",
-          "title": "Blinding Lights",
-          "artist": "The Weeknd",
-          "album": "After Hours",
-          "duration": "3:20",
-          "genre": "Pop"
-        },
-        {
-          "id": "s2",
-          "title": "Levitating",
-          "artist": "Dua Lipa",
-          "album": "Future Nostalgia",
-          "duration": "3:23",
-          "genre": "Pop"
-        },
-        {
-          "id": "s3",
-          "title": "Save Your Tears",
-          "artist": "The Weeknd",
-          "album": "After Hours",
-          "duration": "3:35",
-          "genre": "Pop"
-        }
-      ],
-      "createdAt": "2024-02-01T08:00:00Z"
-    },
-    {
-      "id": "p2",
-      "userId": "u2",
-      "name": "Energia Totale",
-      "subtitle": "Canzoni che mi caricano 🔥",
-      "cover": "⚡",
-      "songs": [
-        {
-          "id": "s4",
-          "title": "SICKO MODE",
-          "artist": "Travis Scott",
-          "album": "Astroworld",
-          "duration": "5:12",
-          "genre": "Hip-Hop"
-        },
-        {
-          "id": "s5",
-          "title": "Montero",
-          "artist": "Lil Nas X",
-          "album": "Montero",
-          "duration": "2:17",
-          "genre": "Hip-Hop"
-        }
-      ],
-      "createdAt": "2024-02-05T16:00:00Z"
-    },
-    {
-      "id": "d32196aa2c03f6dc",
-      "userId": "e6949ae969c83086",
-      "name": "alice",
-      "subtitle": "mio",
-      "cover": "🎵",
-      "songs": [
-        {
-          "id": "21f27fa55a520a16",
-          "title": "w",
-          "artist": "d",
-          "album": "",
-          "duration": "0:00",
-          "genre": "Pop"
-        }
-      ],
-      "createdAt": "2026-03-02T06:32:35.959Z"
-    },
-    {
-      "id": "c94c2ac6c90ea41f",
-      "userId": "31108beb3a9f5d84",
+      "id": "6be1e5d7049c4180",
+      "userId": "f61b279c8368eddf",
       "name": "alice",
       "subtitle": "solo Nayt",
       "cover": "🎵",
-      "songs": [
-        {
-          "id": "7582177620a90509",
-          "title": "w",
-          "artist": "e",
-          "duration": "5:2"
-        }
-      ],
-      "createdAt": "2026-03-07T08:54:46.400Z"
+      "songs": [],
+      "createdAt": "2026-03-10T17:47:28.445Z"
+    },
+    {
+      "id": "bf16cd21135556f6",
+      "userId": "f61b279c8368eddf",
+      "name": "n",
+      "subtitle": "",
+      "cover": "🎵",
+      "songs": [],
+      "createdAt": "2026-03-10T18:00:57.948Z"
+    },
+    {
+      "id": "ebc6794bd71a6ad5",
+      "userId": "f61b279c8368eddf",
+      "name": "m",
+      "subtitle": "",
+      "cover": "🎵",
+      "songs": [],
+      "createdAt": "2026-03-10T18:01:04.235Z"
     }
   ]
 }
