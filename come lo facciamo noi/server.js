@@ -76,13 +76,12 @@ app.post('/api/auth/register', function(req, res) {
 
   // Estrae i dati mandati dal browser nel corpo della richiesta
   const username = req.body.username;
-  const password = req.body.password;
   const avatar   = req.body.avatar;
   const bio      = req.body.bio;
 
-  // Se username o password sono vuoti → blocca con errore 400 ("richiesta sbagliata")
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+  // Se username è vuoto → blocca con errore 400 ("richiesta sbagliata")
+  if (!username) {
+    return res.status(400).json({ error: 'Username obbligatorio' });
   }
 
   // Apre il database
@@ -101,12 +100,11 @@ app.post('/api/auth/register', function(req, res) {
 
   // Crea il nuovo oggetto utente
   const nuovoUtente = {
-    id:        genId(),                  // ID casuale univoco
-    username:  username.trim(),          // .trim() rimuove gli spazi inutili
-    password:  password,                 // la password così com'è
-    avatar:    avatar || '🎧',           // se non ha scelto un avatar, usa 🎧
-    bio:       bio    || '',             // se non ha scritto una bio, stringa vuota
-    createdAt: new Date().toISOString()  // data e ora di registrazione
+    id:        genId(),
+    username:  username.trim(),
+    avatar:    avatar || '🎧',
+    bio:       bio    || '',
+    createdAt: new Date().toISOString()
   };
 
   // Aggiunge il nuovo utente all'array nel database
@@ -128,24 +126,22 @@ app.post('/api/auth/login', function(req, res) {
 
   // Estrae username e password mandati dal browser
   const username = req.body.username;
-  const password = req.body.password;
 
-  // Se uno dei due campi è vuoto → blocca con errore 400 ("richiesta sbagliata")
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Credenziali mancanti' });
+  // Se username è vuoto → blocca con errore 400
+  if (!username) {
+    return res.status(400).json({ error: 'Username mancante' });
   }
 
-  // Apre il database e cerca un utente che abbia
-  // sia lo stesso username che la stessa password
+  // Apre il database e cerca un utente con quell'username
   const db   = readDB();
   const user = db.users.find(function(u) {
-    return u.username === username && u.password === password;
+    return u.username === username;
   });
 
   // Se non trova nessun utente corrispondente → blocca con errore 401 ("non autorizzato")
   // Non diciamo quale dei due è sbagliato per motivi di sicurezza
   if (!user) {
-    return res.status(401).json({ error: 'Username o password errati' });
+    return res.status(401).json({ error: 'Utente non trovato' });
   }
 
   // Utente trovato! Risponde con successo (200 di default)
