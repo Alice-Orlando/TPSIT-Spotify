@@ -1,6 +1,3 @@
-// ============================================
-// CONFIGURAZIONE E IMPORTAZIONI
-// ============================================
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
@@ -11,17 +8,10 @@ const PORT = 3000;
 const DB_PATH     = path.join(__dirname, 'data', 'db.json');
 const PUBLIC_PATH = path.join(__dirname, 'public');
 
-// ============================================
-// MIDDLEWARE
-// ============================================
 app.use(express.static(PUBLIC_PATH));
 app.use(express.json());
 // Logger: registra tutte le richieste con timestamp
 app.use((req, res, next) => { console.log(new Date().toISOString(), req.method, req.url); next(); });
-
-// ============================================
-// FUNZIONI UTILITY E HELPER
-// ============================================
 
 /** legge il file db.json e lo trasforma in un oggetto JavaScript usabile. È come "aprire" il tuo archivio dati.*/
 function readDB()      { return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8')); }
@@ -35,9 +25,6 @@ function genId()       { return crypto.randomBytes(8).toString('hex'); }
 /** prima di mandare i dati di un utente al browser, rimuove la password.*/
 function safeUser(u)   { const { password, ...s } = u; return s; }
 
-// ============================================
-// MIDDLEWARE DI AUTENTICAZIONE
-// ============================================
 
 function requireAuth(req, res, next) {
 
@@ -59,18 +46,9 @@ function requireAuth(req, res, next) {
   if (!user) {
     return res.status(401).json({ error: 'Utente non trovato' });
   }
-
-  // Utente trovato! Lo salva nella richiesta così le route
-  // successive possono sapere chi sta facendo la richiesta
   req.currentUser = user;
-
-  // Tutto ok, vai avanti con la route originale
   next();
 }
-
-// ============================================
-// ROTTE AUTENTICAZIONE
-// ============================================
 
 app.post('/api/auth/register', function(req, res) {
 
@@ -87,8 +65,6 @@ app.post('/api/auth/register', function(req, res) {
   // Apre il database
   const db = readDB();
 
-  // Controlla se esiste già un utente con lo stesso username
-  // toLowerCase() serve per trattare "Mario" e "mario" come uguali
   const utenteEsistente = db.users.find(function(u) {
     return u.username.toLowerCase() === username.toLowerCase();
   });
@@ -113,8 +89,6 @@ app.post('/api/auth/register', function(req, res) {
   // Salva il database aggiornato nel file db.json
   writeDB(db);
 
-  // Risponde al browser con successo (201 = "creato")
-  // safeUser() rimuove la password prima di mandarla al client
   res.status(201).json({
     message: 'Registrazione avvenuta',
     user:    safeUser(nuovoUtente)
@@ -138,14 +112,10 @@ app.post('/api/auth/login', function(req, res) {
     return u.username === username;
   });
 
-  // Se non trova nessun utente corrispondente → blocca con errore 401 ("non autorizzato")
-  // Non diciamo quale dei due è sbagliato per motivi di sicurezza
   if (!user) {
     return res.status(401).json({ error: 'Utente non trovato' });
   }
 
-  // Utente trovato! Risponde con successo (200 di default)
-  // safeUser() rimuove la password prima di mandarla al browser
   res.json({
     message: 'Login ok',
     user:    safeUser(user)
@@ -153,13 +123,6 @@ app.post('/api/auth/login', function(req, res) {
 
 });
 
-// ============================================
-// ROTTE PLAYLIST - GET
-// ============================================
-
-// ============================================
-// ROTTE PLAYLIST - READ
-// ============================================
 
 // Restituisce tutte le playlist con le info dell'autore
 app.get('/api/playlists', function(req, res) {
@@ -213,11 +176,6 @@ app.get('/api/playlists/:id', function(req, res) {
 
 });
 
-
-// ============================================
-// ROTTE PLAYLIST - CREATE, UPDATE, DELETE
-// ============================================
-
 // Crea una nuova playlist (richiede login)
 app.post('/api/playlists', requireAuth, function(req, res) {
 
@@ -261,8 +219,6 @@ app.put('/api/playlists/:id', requireAuth, function(req, res) {
   // Apre il database
   const db = readDB();
 
-  // Cerca la posizione (indice) della playlist nell'array
-  // findIndex restituisce -1 se non la trova
   const indice = db.playlists.findIndex(function(p) {
     return p.id === req.params.id;
   });
@@ -272,8 +228,6 @@ app.put('/api/playlists/:id', requireAuth, function(req, res) {
     return res.status(404).json({ error: 'Playlist non trovata' });
   }
 
-  // Controlla che la playlist appartenga all'utente loggato
-  // Non puoi modificare le playlist degli altri!
   if (db.playlists[indice].userId !== req.currentUser.id) {
     return res.status(403).json({ error: 'Non autorizzato' });
   }
@@ -323,11 +277,6 @@ app.delete('/api/playlists/:id', requireAuth, function(req, res) {
   res.json({ message: 'Playlist eliminata' });
 
 });
-
-
-// ============================================
-// ROTTE CANZONI (SONGS)
-// ============================================
 
 // Aggiunge una canzone a una playlist (richiede login)
 app.post('/api/playlists/:id/songs', requireAuth, function(req, res) {
@@ -401,12 +350,8 @@ app.delete('/api/playlists/:id/songs/:songId', requireAuth, function(req, res) {
     return res.status(403).json({ error: 'Non autorizzato' });
   }
 
-  // Salva il numero di canzoni prima di filtrare
-  // Serve per capire dopo se la canzone è stata trovata e rimossa
   const numeroPrima = db.playlists[indice].songs.length;
 
-  // Ricrea l'array delle canzoni escludendo quella da eliminare
-  // filter() tiene solo le canzoni il cui ID è DIVERSO da quello da rimuovere
   db.playlists[indice].songs = db.playlists[indice].songs.filter(function(s) {
     return s.id !== req.params.songId;
   });
@@ -423,9 +368,6 @@ app.delete('/api/playlists/:id/songs/:songId', requireAuth, function(req, res) {
   res.json({ message: 'Canzone rimossa' });
 
 });
-// ============================================
-// ERROR HANDLING E FALLBACK
-// ============================================
 
 // Endpoint non trovato (404)
 app.use('/api/*path', (req, res) => res.status(404).json({ error: 'Endpoint non trovato' }));
@@ -433,7 +375,4 @@ app.use('/api/*path', (req, res) => res.status(404).json({ error: 'Endpoint non 
 // Gestore errori generale
 app.use((err, req, res, next) => { console.error(err); res.status(500).json({ error: 'Errore interno' }); });
 
-// ============================================
-// AVVIO SERVER
-// ============================================
 app.listen(PORT, () => console.log(`🎵 TuneNest → http://localhost:${PORT}`));
