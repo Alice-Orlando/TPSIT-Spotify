@@ -99,7 +99,7 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="notifica"></div>
 
 <script>
 let currentUser = null;
@@ -122,8 +122,8 @@ function esc(s) {
 }
 
 // Mostra una notifica temporanea in basso allo schermo
-function toast(msg, tipo = 'success') {
-  const el = document.getElementById('toast');
+function notifica(msg, tipo = 'success') {
+  const el = document.getElementById('notifica');
   el.textContent = msg;
   el.className = `show ${tipo}`;
   clearTimeout(window._t);
@@ -139,31 +139,10 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 // Chiude il modal se si clicca sullo sfondo scuro
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
 
-// ── AUTH ────────────────────────────────────────────
-
-// Mostra un suggerimento mentre l'utente digita il nome
-document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('auth-user');
-  if (input) {
-    input.addEventListener('input', async () => {
-      const val = input.value.trim();
-      const hint = document.getElementById('auth-hint');
-      if (!val) { hint.textContent = ''; return; }
-      try {
-        const all = await fetch('/api/playlists').then(r => r.json());
-        // Usiamo le playlist per capire quali utenti esistono (non abbiamo un endpoint /users)
-        // Leggiamo dal db tramite un login "silenzioso" — semplicemente proviamo
-        hint.textContent = '';
-      } catch(e) {}
-    });
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
-  }
-});
-
 // Prova prima il login; se l'utente non esiste lo registra automaticamente
 async function doAuth() {
   const username = document.getElementById('auth-user').value.trim();
-  if (!username) return toast('Inserisci un username', 'error');
+  if (!username) return notifica('Inserisci un username', 'error');
   try {
     // Prova login solo con username
     const res = await fetch('/api/auth/login', {
@@ -187,9 +166,9 @@ async function doAuth() {
       }
       const data = await reg.json();
       loginSuccess(data.user);
-      toast('Benvenuto, ' + username + '! 🎉', 'success');
+      notifica('Benvenuto, ' + username + '! 🎉', 'success');
     }
-  } catch(e) { toast(e.message, 'error'); }
+  } catch(e) { notifica(e.message, 'error'); }
 }
 
 // Salva l'utente, nasconde il login, mostra l'app e carica le playlist
@@ -209,8 +188,6 @@ function doLogout() {
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
-// ── NAVIGAZIONE ─────────────────────────────────────
-
 // Torna alla pagina principale Le mie playlist
 function goMyPlaylists() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -219,17 +196,13 @@ function goMyPlaylists() {
   renderMyPlaylists();
 }
 
-// ── DATI ────────────────────────────────────────────
-
 // Scarica tutte le playlist dal server e aggiorna la pagina
 async function loadPlaylists() {
   try {
     playlists = await api('GET', '/playlists');
     renderMyPlaylists();
-  } catch(e) { toast('Errore caricamento', 'error'); }
+  } catch(e) { notifica('Errore caricamento', 'error'); }
 }
-
-// ── RENDER ──────────────────────────────────────────
 
 // Genera l'HTML di una singola card playlist
 function playlistCard(p) {
@@ -242,7 +215,7 @@ function playlistCard(p) {
 }
 
 // Genera l'HTML per il messaggio "lista vuota"
-function emptyState(icon, title, msg) {
+function noplaylist(icon, title, msg) {
   return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
 }
 
@@ -251,10 +224,8 @@ function renderMyPlaylists() {
   const mine = playlists.filter(p => p.userId === currentUser.id);
   document.getElementById('my-playlists-grid').innerHTML = mine.length
     ? mine.map(playlistCard).join('')
-    : emptyState('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
+    : noplaylist('📭', 'Ancora nessuna playlist', 'Premi <strong>＋ Nuova playlist</strong> per iniziare!');
 }
-
-// ── DETTAGLIO PLAYLIST ──────────────────────────────
 
 // Carica dal server e mostra i dettagli e le canzoni di una playlist
 async function openDetail(id) {
@@ -323,7 +294,7 @@ async function savePlaylist() {
   const editId   = document.getElementById('edit-pl-id').value;
   const name     = document.getElementById('pl-name').value.trim();
   const subtitle = document.getElementById('pl-subtitle').value.trim();
-  if (!name) return toast('Il nome è obbligatorio', 'error');
+  if (!name) return notifica('Il nome è obbligatorio', 'error');
   try {
     if (editId) {
       const updated = await api('PUT', '/playlists/' + editId, { name, subtitle });
@@ -334,8 +305,8 @@ async function savePlaylist() {
     }
     closeModal('modal-playlist');
     renderMyPlaylists();
-    toast(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
-  } catch(e) { toast(e.message, 'error'); }
+    notifica(editId ? 'Playlist aggiornata!' : 'Playlist creata!', 'success');
+  } catch(e) { notifica(e.message, 'error'); }
 }
 
 // Chiede conferma ed elimina la playlist dal server e dalla lista locale
@@ -345,8 +316,8 @@ async function deletePlaylist(id) {
     await api('DELETE', '/playlists/' + id);
     playlists = playlists.filter(p => p.id !== id);
     goMyPlaylists();
-    toast('Playlist eliminata', 'success');
-  } catch(e) { toast(e.message, 'error'); }
+    notifica('Playlist eliminata', 'success');
+  } catch(e) { notifica(e.message, 'error'); }
 }
 
 // ── SONG CRUD ───────────────────────────────────────
@@ -364,15 +335,15 @@ async function saveSong() {
   const title      = document.getElementById('song-title').value.trim();
   const artist     = document.getElementById('song-artist').value.trim();
   const duration   = document.getElementById('song-duration').value.trim();
-  if (!title || !artist) return toast('Titolo e artista sono obbligatori', 'error');
+  if (!title || !artist) return notifica('Titolo e artista sono obbligatori', 'error');
   try {
     const song = await api('POST', '/playlists/' + playlistId + '/songs', { title, artist, duration });
     const pl = playlists.find(p => p.id === playlistId);
     if (pl) pl.songs.push(song);
     closeModal('modal-song');
     openDetail(playlistId);
-    toast('Canzone aggiunta!', 'success');
-  } catch(e) { toast(e.message, 'error'); }
+    notifica('Canzone aggiunta!', 'success');
+  } catch(e) { notifica(e.message, 'error'); }
 }
 
 // Rimuove una canzone dalla playlist sul server e aggiorna la vista
@@ -382,8 +353,8 @@ async function deleteSong(playlistId, songId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (pl) pl.songs = pl.songs.filter(s => s.id !== songId);
     openDetail(playlistId);
-    toast('Canzone rimossa', 'success');
-  } catch(e) { toast(e.message, 'error'); }
+    notifica('Canzone rimossa', 'success');
+  } catch(e) { notifica(e.message, 'error'); }
 }
 
 
