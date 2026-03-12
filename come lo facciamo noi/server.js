@@ -12,172 +12,184 @@ const PUBLIC = path.join(__dirname, 'public')
 app.use(express.json())
 app.use(express.static(PUBLIC))
 
-const read = () => JSON.parse(fs.readFileSync(DB))
-const write = d => fs.writeFileSync(DB, JSON.stringify(d, null, 2))
-const id = () => crypto.randomBytes(8).toString('hex')
-const safeUser = u => ({ id: u.id, username: u.username, avatar: u.avatar, bio: u.bio })
+const leggi = () => JSON.parse(fs.readFileSync(DB))
+const scrivi = d => fs.writeFileSync(DB, JSON.stringify(d, null, 2))
+const idCasuale = () => crypto.randomBytes(8).toString('hex')
+const utenteProtetto = u => ({ id: u.id, nomeutente: u.nomeutente, avatar: u.avatar, bio: u.bio })
 
-const auth = (req, res, next) => {
-  const uid = req.headers['x-user-id']
-  if (!uid) return res.status(401).json({ error: 'Non autenticato' })
+// autenticazione semplice basata su header 
+const autenticazione = (req, res, next) => {
+  const idUtente = req.headers['x-user-id']
+  if (!idUtente) return res.status(401).json({ error: 'Non autenticato' })
 
-  const db = read()
-  const user = db.users.find(u => u.id === uid)
-  if (!user) return res.status(401).json({ error: 'Utente non trovato' })
+  const db = leggi()
+  const utente = db.utenti.find(u => u.id === idUtente)
+  if (!utente) return res.status(401).json({ error: 'Utente non trovato' })
 
-  req.user = user
+  req.utente = utente
   next()
 }
 
+// registrazione se l'username non esisteva
 app.post('/api/auth/register', (req, res) => {
-  const { username, avatar = '🎧', bio = '' } = req.body
-  if (!username) return res.status(400).json({ error: 'Username obbligatorio' })
+  const { nomeutente, avatar = '🎧', bio = '' } = req.body
+  if (!nomeutente) return res.status(400).json({ error: 'Username obbligatorio' })
 
-  const db = read()
+  const db = leggi()
 
-  if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase()))
+  if (db.utenti.some(u => u.nomeutente.toLowerCase() === nomeutente.toLowerCase()))
     return res.status(409).json({ error: 'Username già in uso' })
 
-  const user = {
-    id: id(),
-    username: username.trim(),
+  const utente = {
+    id: idCasuale(),
+    nomeutente: nomeutente.trim(),
     avatar,
     bio,
-    createdAt: new Date().toISOString()
+    dataCrazione: new Date().toISOString()
   }
 
-  db.users.push(user)
-  write(db)
+  db.utenti.push(utente)
+  scrivi(db)
 
-  res.status(201).json({ user: safeUser(user) })
+  res.status(201).json({ utente: utenteProtetto(utente) })
 })
 
+// login se l'username esisteva
 app.post('/api/auth/login', (req, res) => {
-  const { username } = req.body
-  if (!username) return res.status(400).json({ error: 'Username mancante' })
+  const { nomeutente } = req.body
+  if (!nomeutente) return res.status(400).json({ error: 'Username mancante' })
 
-  const db = read()
-  const user = db.users.find(u => u.username === username)
+  const db = leggi()
+  const utente = db.utenti.find(u => u.nomeutente === nomeutente)
 
-  if (!user) return res.status(401).json({ error: 'Utente non trovato' })
+  if (!utente) return res.status(401).json({ error: 'Utente non trovato' })
 
-  res.json({ user: safeUser(user) })
+  res.json({ utente: utenteProtetto(utente) })
 })
 
+// caricamento playlist con info autore
 app.get('/api/playlists', (req, res) => {
-  const db = read()
+  const db = leggi()
 
-  const result = db.playlists.map(p => ({
+  const risultato = db.playlist.map(p => ({
     ...p,
-    author: safeUser(db.users.find(u => u.id === p.userId) || {})
+    autore: utenteProtetto(db.utenti.find(u => u.id === p.idUtente) || {})
   }))
 
-  res.json(result)
+  res.json(risultato)
 })
 
+// caricamento playlist singola con info autore
 app.get('/api/playlists/:id', (req, res) => {
-  const db = read()
-  const pl = db.playlists.find(p => p.id === req.params.id)
+  const db = leggi()
+  const pl = db.playlist.find(p => p.id === req.params.id)
 
   if (!pl) return res.status(404).json({ error: 'Playlist non trovata' })
 
-  const author = db.users.find(u => u.id === pl.userId)
+  const autore = db.utenti.find(u => u.id === pl.idUtente)
 
-  res.json({ ...pl, author: safeUser(author || {}) })
+  res.json({ ...pl, autore: utenteProtetto(autore || {}) })
 })
 
-app.post('/api/playlists', auth, (req, res) => {
-  const { name, subtitle = '', cover = '🎵' } = req.body
-  if (!name) return res.status(400).json({ error: 'Nome obbligatorio' })
+// creazione playlist
+app.post('/api/playlists', autenticazione, (req, res) => {
+  const { nome, sottotitolo = '', copertina = '🎵' } = req.body
+  if (!nome) return res.status(400).json({ error: 'Nome obbligatorio' })
 
-  const db = read()
+  const db = leggi()
 
   const pl = {
-    id: id(),
-    userId: req.user.id,
-    name: name.trim(),
-    subtitle: subtitle.trim(),
-    cover,
-    songs: [],
-    createdAt: new Date().toISOString()
+    id: idCasuale(),
+    idUtente: req.utente.id,
+    nome: nome.trim(),
+    sottotitolo: sottotitolo.trim(),
+    copertina,
+    canzoni: [],
+    dataCrazione: new Date().toISOString()
   }
 
-  db.playlists.push(pl)
-  write(db)
+  db.playlist.push(pl)
+  scrivi(db)
 
   res.status(201).json(pl)
 })
 
-app.put('/api/playlists/:id', auth, (req, res) => {
-  const db = read()
-  const pl = db.playlists.find(p => p.id === req.params.id)
+// modifica playlist
+app.put('/api/playlists/:id', autenticazione, (req, res) => {
+  const db = leggi()
+  const pl = db.playlist.find(p => p.id === req.params.id)
 
   if (!pl) return res.status(404).json({ error: 'Playlist non trovata' })
-  if (pl.userId !== req.user.id) return res.status(403).json({ error: 'Non autorizzato' })
+  if (pl.idUtente !== req.utente.id) return res.status(403).json({ error: 'Non autorizzato' })
 
   Object.assign(pl, req.body)
-  write(db)
+  scrivi(db)
 
   res.json(pl)
 })
 
-app.delete('/api/playlists/:id', auth, (req, res) => {
-  const db = read()
-  const i = db.playlists.findIndex(p => p.id === req.params.id)
+// eliminazione playlist
+app.delete('/api/playlists/:id', autenticazione, (req, res) => {
+  const db = leggi()
+  const i = db.playlist.findIndex(p => p.id === req.params.id)
 
   if (i === -1) return res.status(404).json({ error: 'Playlist non trovata' })
-  if (db.playlists[i].userId !== req.user.id)
+  if (db.playlist[i].idUtente !== req.utente.id)
     return res.status(403).json({ error: 'Non autorizzato' })
 
-  db.playlists.splice(i, 1)
-  write(db)
+  db.playlist.splice(i, 1)
+  scrivi(db)
 
   res.json({ message: 'Playlist eliminata' })
 })
 
-app.post('/api/playlists/:id/songs', auth, (req, res) => {
-  const { title, artist, duration = '0:00' } = req.body
-  if (!title || !artist)
+// aggiunta canzone a playlist
+app.post('/api/playlists/:id/songs', autenticazione, (req, res) => {
+  const { titolo, artista, durata = '0:00' } = req.body
+  if (!titolo || !artista)
     return res.status(400).json({ error: 'Titolo e artista obbligatori' })
 
-  const db = read()
-  const pl = db.playlists.find(p => p.id === req.params.id)
+  const db = leggi()
+  const pl = db.playlist.find(p => p.id === req.params.id)
 
   if (!pl) return res.status(404).json({ error: 'Playlist non trovata' })
-  if (pl.userId !== req.user.id)
+  if (pl.idUtente !== req.utente.id)
     return res.status(403).json({ error: 'Non autorizzato' })
 
-  const song = { id: id(), title: title.trim(), artist: artist.trim(), duration }
+  const canzone = { id: idCasuale(), titolo: titolo.trim(), artista: artista.trim(), durata }
 
-  pl.songs.push(song)
-  write(db)
+  pl.canzoni.push(canzone)
+  scrivi(db)
 
-  res.status(201).json(song)
+  res.status(201).json(canzone)
 })
 
-app.delete('/api/playlists/:id/songs/:songId', auth, (req, res) => {
-  const db = read()
-  const pl = db.playlists.find(p => p.id === req.params.id)
+// rimozione canzone da playlist
+app.delete('/api/playlists/:id/songs/:songId', autenticazione, (req, res) => {
+  const db = leggi()
+  const pl = db.playlist.find(p => p.id === req.params.id)
 
   if (!pl) return res.status(404).json({ error: 'Playlist non trovata' })
-  if (pl.userId !== req.user.id)
+  if (pl.idUtente !== req.utente.id)
     return res.status(403).json({ error: 'Non autorizzato' })
 
-  const before = pl.songs.length
-  pl.songs = pl.songs.filter(s => s.id !== req.params.songId)
+  const prima = pl.canzoni.length
+  pl.canzoni = pl.canzoni.filter(s => s.id !== req.params.songId)
 
-  if (before === pl.songs.length)
+  if (prima === pl.canzoni.length)
     return res.status(404).json({ error: 'Canzone non trovata' })
 
-  write(db)
+  scrivi(db)
 
   res.json({ message: 'Canzone rimossa' })
 })
 
+// gestione endpoint non trovati
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Endpoint non trovato' })
 })
 
+// avvio server
 app.listen(PORT, () =>
   console.log(`TuneNest → http://localhost:${PORT}`)
 )

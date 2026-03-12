@@ -1,40 +1,31 @@
 {
-  "users": [
+  "utenti": [
     {
       "id": "f61b279c8368eddf",
-      "username": "dany",
+      "nomeutente": "dany",
       "avatar": "🎧",
       "bio": "",
-      "createdAt": "2026-03-10T17:47:21.370Z"
+      "dataCrazione": "2026-03-10T17:47:21.370Z"
     }
   ],
-  "playlists": [
-    {
-      "id": "6be1e5d7049c4180",
-      "userId": "f61b279c8368eddf",
-      "name": "alice",
-      "subtitle": "solo Nayt",
-      "cover": "🎵",
-      "songs": [],
-      "createdAt": "2026-03-10T17:47:28.445Z"
-    },
+  "playlist": [
     {
       "id": "bf16cd21135556f6",
-      "userId": "f61b279c8368eddf",
-      "name": "n",
-      "subtitle": "",
-      "cover": "🎵",
-      "songs": [],
-      "createdAt": "2026-03-10T18:00:57.948Z"
+      "idUtente": "f61b279c8368eddf",
+      "nome": "n",
+      "sottotitolo": "",
+      "copertina": "🎵",
+      "canzoni": [],
+      "dataCrazione": "2026-03-10T18:00:57.948Z"
     },
     {
-      "id": "ebc6794bd71a6ad5",
-      "userId": "f61b279c8368eddf",
-      "name": "m",
-      "subtitle": "",
-      "cover": "🎵",
-      "songs": [],
-      "createdAt": "2026-03-10T18:01:04.235Z"
+      "id": "e837c0e0d7886de8",
+      "idUtente": "f61b279c8368eddf",
+      "nome": "chill\\",
+      "sottotitolo": "erewtetret",
+      "copertina": "🎵",
+      "canzoni": [],
+      "dataCrazione": "2026-03-12T07:58:31.336Z"
     }
   ]
 }
