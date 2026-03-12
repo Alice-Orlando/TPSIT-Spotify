@@ -15,7 +15,6 @@ app.use(express.static(PUBLIC))
 const leggi = () => JSON.parse(fs.readFileSync(DB))
 const scrivi = d => fs.writeFileSync(DB, JSON.stringify(d, null, 2))
 const idCasuale = () => crypto.randomBytes(8).toString('hex')
-const utenteProtetto = u => ({ id: u.id, nomeutente: u.nomeutente, avatar: u.avatar, bio: u.bio })
 
 // autenticazione semplice basata su header 
 const autenticazione = (req, res, next) => {
@@ -51,7 +50,7 @@ app.post('/api/auth/register', (req, res) => {
   db.utenti.push(utente)
   scrivi(db)
 
-  res.status(201).json({ utente: utenteProtetto(utente) })
+  res.status(201).json({ utente: utente })
 })
 
 // login se l'username esisteva
@@ -64,7 +63,7 @@ app.post('/api/auth/login', (req, res) => {
 
   if (!utente) return res.status(401).json({ error: 'Utente non trovato' })
 
-  res.json({ utente: utenteProtetto(utente) })
+  res.json({ utente: utente })
 })
 
 // caricamento playlist con info autore
@@ -73,7 +72,7 @@ app.get('/api/playlists', (req, res) => {
 
   const risultato = db.playlist.map(p => ({
     ...p,
-    autore: utenteProtetto(db.utenti.find(u => u.id === p.idUtente) || {})
+    autore: db.utenti.find(u => u.id === p.idUtente) || {}
   }))
 
   res.json(risultato)
@@ -88,7 +87,7 @@ app.get('/api/playlists/:id', (req, res) => {
 
   const autore = db.utenti.find(u => u.id === pl.idUtente)
 
-  res.json({ ...pl, autore: utenteProtetto(autore || {}) })
+  res.json({ ...pl, autore: autore || {} })
 })
 
 // creazione playlist

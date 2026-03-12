@@ -20,9 +20,16 @@
       "id": "bf16cd21135556f6",
       "idUtente": "f61b279c8368eddf",
       "nome": "n",
-      "sottotitolo": "",
+      "sottotitolo": "wss",
       "copertina": "🎵",
-      "canzoni": [],
+      "canzoni": [
+        {
+          "id": "7046ea4cfc3c5c65",
+          "titolo": "qda",
+          "artista": "aqf",
+          "durata": "fq"
+        }
+      ],
       "dataCrazione": "2026-03-10T18:00:57.948Z"
     },
     {
@@ -33,6 +40,15 @@
       "copertina": "🎵",
       "canzoni": [],
       "dataCrazione": "2026-03-12T07:58:31.336Z"
+    },
+    {
+      "id": "1209311eca4a5747",
+      "idUtente": "f61b279c8368eddf",
+      "nome": "colore",
+      "sottotitolo": "solo Nayt",
+      "copertina": "🎵",
+      "canzoni": [],
+      "dataCrazione": "2026-03-12T15:47:27.113Z"
     }
   ]
 }
