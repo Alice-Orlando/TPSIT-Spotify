@@ -142,7 +142,7 @@ document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('cli
 // Prova prima il login; se l'utente non esiste lo registra automaticamente
 async function faiAutenticazione() {
   const nomeutente = document.getElementById('auth-user').value.trim();
-  if (!nomeutente) return notifica('Inserisci un username', 'error');
+  if (!nomeutente) return notifica('Inserisci un username', 'error'); 
   try {
     // Prova login solo con username
     const res = await fetch('/api/auth/login', {
@@ -163,7 +163,7 @@ async function faiAutenticazione() {
       if (!reg.ok) {
         const err = await reg.json();
         throw new Error(err.error || 'Errore registrazione');
-      }
+      } //se tutto ok
       const dati = await reg.json();
       loginRiuscito(dati.utente);
       notifica('Benvenuto, ' + nomeutente + '! 🎉', 'success');
@@ -277,8 +277,6 @@ async function apriDettagli(id) {
   document.querySelector('.nav-btn').classList.remove('active');
 }
 
-// ── PLAYLIST CRUD ───────────────────────────────────
-
 // Apre il modal per creare una nuova playlist o modificarne una esistente
 function apriModalPlaylist(idModifica = null) {
   document.getElementById('modal-pl-title').textContent = idModifica ? 'Modifica playlist' : 'Crea playlist';
@@ -319,8 +317,6 @@ async function eliminaPlaylist(id) {
     notifica('Playlist eliminata', 'success');
   } catch(e) { notifica(e.message, 'error'); }
 }
-
-// ── SONG CRUD ───────────────────────────────────────
 
 // Apre il modal per aggiungere una canzone, svuotando i campi
 function apriModalCanzone(idPlaylist) {
